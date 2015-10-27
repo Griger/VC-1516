@@ -60,9 +60,9 @@ Mat calcularVectorMascara(float sigma, float(*f)(float, float)) {
 	Vamos a calcular el numero de pixeles que conformaran el vector mascara.
 	En primer lugar recordemos que necesitamos tener una mascara de orden impar, de modos que haremoa a*2 + 1, donde a es la siguiente cantidad:
 	Como sabemos para quedarnos con la parte significativa de la gaussiana tenemos que muestrear en el intervalor [-3sigma, 3sigma].
-	Ahora bien, podemos obtener número decimales con lo que tendremos que redondear. Si hiciésemos la operación 3*ceil(sigma)*2+1 obtendríamos mascaras de como minimo longitud 7 algo que no es del todo adeacuado.
-	Con lo cual vamos a optar por hacer un redondeo de la forma round(3*sigma)*2+1 y este sera el tamaño de nuestra mascara. Además hemos introudicido el 3 dentro del round porque de otro modo no seríamos tan preciso en el tamaño requerido,
-	estaríamos en una situación similar a la anterior, mascaras de 1, luego de 7, sin ningun otro valor intermedio.
+	Ahora bien, podemos obtener numero decimales con lo que tendremos que redondear. Si hiciesemos la operacion 3*ceil(sigma)*2+1 obtendriamos mascaras de como minimo longitud 7 algo que no es del todo adeacuado.
+	Con lo cual vamos a optar por hacer un redondeo de la forma round(3*sigma)*2+1 y este sera el tama|\textit{ñ}|o de nuestra mascara. Ademas hemos introducido el 3 dentro del round porque de otro modo no seriamos tan precisos en el tama|\textit{ñ}|o requerido,
+	estariamos en una situacion similar a la anterior, mascaras de 1, luego de 7, sin ningun otro valor intermedio.
 	Dejamos el 2 fuera del round para asegurar de obtener una longitud impar, como queremos.
 	*/
 
@@ -72,7 +72,7 @@ Mat calcularVectorMascara(float sigma, float(*f)(float, float)) {
 	/*
 	Ahora vamos a calcular el tamanio del paso de muestre, como vamos a ir muestreando.
 	Queremos que el mayor peso lo tenga el pixel central, con lo cual al este pixel le daremos el valor f(0).
-	En consecuencia el paso será paso = 6sigma/(longitud-1).
+	En consecuencia el paso sera paso = 6sigma/(longitud-1).
 	*/
 
 	float paso = 6 * sigma / (longitud - 1);
@@ -118,7 +118,7 @@ Una vez orlada la fila/columna a convolucionar con esta cantidad de píxeles (la
 
 \begin{lstlisting}
 Mat obtenerVectorOrlado1C(Mat &senal, Mat &mascara, int cond_contorno) {
-	//Añadiremos digamos a cada lado del vector (longitud_senal - 1)/2 pues son los pixeles como maximo que sobrarian al situar la mascara en una esquina.
+	//A|\textit{ñ}|adiremos digamos a cada lado del vector (longitud_senal - 1)/2 pues son los pixeles como maximo que sobrarian al situar la mascara en una esquina.
 	//Nosotros vamos a trabajar con vectores fila, pero no sabemos como sera senal con lo que vamos a trasponerla si es necesario.
 	Mat copia_senal;
 
@@ -240,7 +240,7 @@ Mat convolucion2D(Mat &im, float sigma, int cond_bordes) {
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=80mm]{apartadoA.PNG}
+\includegraphics[width=100mm]{apartadoA.PNG}
 \end{figure}
 
 Como podemos ver cuánto más grande es el sigma, y sobre todo cuando se aumenta el orden de la máscara la imagen se difumina más, esto se debe a que cada vez influyen más píxeles (cada vez más alejados del central) en el valor de uno.\\
@@ -269,7 +269,7 @@ Hemos hecho dos versiones para elegir si queremos o no queremos recuperar las im
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=80mm]{apartadoB.PNG}
+\includegraphics[width=100mm]{apartadoB.PNG}
 \end{figure}
 
 Para cada pareja de imágenes habrá que ajustar adecuadamente los sigmas de modo que el efecto sea el mejor posible.\\
@@ -331,7 +331,7 @@ void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=80mm]{apartadoC.PNG}
+\includegraphics[width=100mm]{apartadoC.PNG}
 \end{figure}
 
 Aquí podemos ver el efecto que se busca en las imágenes híbridas. En esta ocasión considero que he conseguido un efecto bastante bueno tras probar varios sigmas y decidir cuál de las dos imágenes usar para las frecuencias bajas y cuales las altas. Este ha sido el resultado final. En cambio por ejemplo para la híbrida entre Einstein y Marilyn ha no he logrado que quedase bien, siempre había algunas frecuencias que resaltaban y no debían resaltar.\\
