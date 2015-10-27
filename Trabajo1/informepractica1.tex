@@ -249,13 +249,34 @@ Como podemos ver cuánto más grande es el sigma, y sobre todo cuando se aumenta
 
 El código es muy sencillo; como sabemos para obtener una imagen híbrida lo único que tenemos que hacer es obtener las frecuencias bajas de una imagen (aplicar un filtro de alisamiento, con las funciones de convolución de la parte A) y obtener las altas de una imagen, restándole a la original sus frecuencias bajas.\\
 
-[Ejemplo del perro-gato]\\
+\begin{lstlisting}
+Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2) {
+	Mat bajas_frecuencias = convolucion2D(im1, sigma1, 0);
+	Mat altas_frecuencias = im2 - convolucion2D(im2, sigma2, 0);
 
-Para cada pareja de imágenes habrá que ajustar adecuadamente los sigmas de modo que el efecto sea el mejor posible.
+	return bajas_frecuencias + altas_frecuencias;
+}
 
-[Reflexión sobre sigmas del gato perro]\\
+Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2, Mat &bajas_frecuencias, Mat &altas_frecuencias) {
+	bajas_frecuencias = convolucion2D(im1, sigma1, 0);
+	altas_frecuencias = im2 - convolucion2D(im2, sigma2, 0);
+
+	return bajas_frecuencias + altas_frecuencias;
+}
+\end{lstlisting}
+
+Hemos hecho dos versiones para elegir si queremos o no queremos recuperar las imagenes de altas y bajas frecuencias para futuros cálculos y procedimientos con ellas.\\
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=80mm]{apartadoB.PNG}
+\end{figure}
+
+Para cada pareja de imágenes habrá que ajustar adecuadamente los sigmas de modo que el efecto sea el mejor posible.\\
 
 \section*{C. Pirámide Gaussiana}
+
+
 
 \textbf{\textit{calcularPirGaussiana1C}}:\\
 

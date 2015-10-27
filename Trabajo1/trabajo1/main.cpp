@@ -394,6 +394,7 @@ Mat convolucion2D(Mat &im, float sigma, int cond_bordes) {
 	return convolucion;
 }
 
+
 /*
 Funcion que calcula una imagen hibrida a partir de dos dadas.
 @im1: una de las imagenes de las que partimos para formar la hibrida.
@@ -401,32 +402,27 @@ Funcion que calcula una imagen hibrida a partir de dos dadas.
 @sigma1: el sigma para la mascara de alisamiento a aplicar sobre im1.
 @sigma2: el sigma para la mascara de alisamiento a aplicar sobre im2.
 */
-Mat calcularImHibrida1C(Mat &im1, Mat &im2, float sigma1, float sigma2) {
-	Mat frecuenciasBajas = convolucion2D(im1, sigma1, 0);
-	Mat frecuenciasAltas = im2 - convolucion2D(im2, sigma2, 0);
+Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2) {
+	Mat bajas_frecuencias = convolucion2D(im1, sigma1, 0);
+	Mat altas_frecuencias = im2 - convolucion2D(im2, sigma2, 0);
 
-	return frecuenciasAltas + frecuenciasBajas;
+	return bajas_frecuencias + altas_frecuencias;
 }
 
-Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2) {
-	Mat hibrida;
-	Mat canalesIm1[3];
-	Mat canalesIm2[3];
-	Mat canalesHibrida[3];
+/*
+Funcion que calcula una imagen hibrida a partir de dos dadas.
+@im1: una de las imagenes de las que partimos para formar la hibrida.
+@im2: la otra imagen.
+@sigma1: el sigma para la mascara de alisamiento a aplicar sobre im1.
+@sigma2: el sigma para la mascara de alisamiento a aplicar sobre im2.
+@bajas_frecuencias = imagen donde guardamos las bajas frecuencias a usar.
+@altas_frecuencias = imagen donde guardamos las altas frecuencias a usar.
+*/
+Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2, Mat &bajas_frecuencias, Mat &altas_frecuencias) {
+	bajas_frecuencias = convolucion2D(im1, sigma1, 0);
+	altas_frecuencias = im2 - convolucion2D(im2, sigma2, 0);
 
-	if (im1.channels() == 1 && im2.channels() == 1)
-		hibrida = calcularImHibrida1C(im1, im2, sigma1, sigma2);
-	else if (im1.channels() == 3 && im2.channels() == 3) {
-		split(im1, canalesIm1);
-		split(im2, canalesIm2);
-		for (int i = 0; i < 3; i++)
-			canalesHibrida[i] = calcularImHibrida1C(canalesIm1[i], canalesIm2[i], sigma1, sigma2);
-		merge(canalesHibrida, 3, hibrida);
-	}
-	else
-		cout << "Numero de canales no valido." << endl;
-
-	return hibrida;
+	return bajas_frecuencias + altas_frecuencias;
 }
 
 Mat submuestrear1C(Mat &im) {
@@ -504,29 +500,56 @@ int main(int argc, char* argv[]) {
 	apartadoA.push_back(eins2);
 	apartadoA.push_back(eins3);
 
-	mostrarImagenes("Apartado A", apartadoA);	
+	mostrarImagenes("Apartado A", apartadoA);
+	cout << "Pulse ENTER para continuar..." << endl;
 
-	/*int numNiveles = 6;
+	waitKey(0);
+	destroyAllWindows();	
 
-	Mat im1 = imread("imagenes/data/cat.bmp");
-	Mat im2 = imread("imagenes/data/dog.bmp");
-		
-	im1.convertTo(im1, CV_32F);
-	im2.convertTo(im2, CV_32FC3);
-	
-	Mat imhibrida = calcularImHibrida(im2, im1, 3.5, 10);
+	cout << "Apartado B. Mostramos la imagen hibrida entre el gato y el perro. Junto con las bajas y altas frecuencias que se han mezclado." << endl;
 
+	Mat cat = imread("imagenes/data/cat.bmp");
+	Mat dog = imread("imagenes/data/dog.bmp");
+
+	cat.convertTo(cat, CV_32FC3);
+	dog.convertTo(dog, CV_32FC3);
+
+	Mat altas, bajas;
+
+	Mat imhibrida = calcularImHibrida(dog, cat, 3.5, 10, bajas, altas);
+
+	int numNiveles = 6;
 	vector<Mat> piramide;
 
 	calcularPirGaussiana(imhibrida, piramide, numNiveles);
 
+
+	imhibrida.convertTo(imhibrida, CV_8UC3);
+	altas.convertTo(altas, CV_8UC3);
+	bajas.convertTo(bajas, CV_8UC3);
+
+	vector<Mat> apartadoB;
+
+	apartadoB.push_back(bajas);
+	apartadoB.push_back(imhibrida);
+	apartadoB.push_back(altas);
+
+	mostrarImagenes("Apartado B", apartadoB);
+	
+
 	for (int i = 0; i < numNiveles; i++) 
 		piramide.at(i).convertTo(piramide.at(i), CV_8UC3);	
 
-	mostrarImagenes("Piramide", piramide);*/
-	
+	cout << "Pulse ENTER para continuar..." << endl;
 
-	waitKey();
+	waitKey(0);
+	destroyAllWindows();
+
+	cout << "Apartado C: mostramos una piramide con la imagen hibrida anterior." << endl;
+
+	mostrarImagenes("Apartado C", piramide);	
+
+	waitKey(0);
 	destroyAllWindows();
 
 	system("PAUSE");
