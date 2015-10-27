@@ -276,19 +276,102 @@ Para cada pareja de imágenes habrá que ajustar adecuadamente los sigmas de mod
 
 \section*{C. Pirámide Gaussiana}
 
-
-
-\textbf{\textit{calcularPirGaussiana1C}}:\\
-
 Aquí lo único que hacemos es aplicar el mecanismo básico para obtener las pirámides Gaussianas. Partimos de la imagen original como primer nivel, entonces para obtener un nivel lo que hacemos es alisar el anterior y submuestrearlo, esto es tomamos sólo las columnas y filas impares.\\
 
-Lo que hay que tener en cuenta es el sigma para el filtro de alisamiento, dado que vamos saltanto las columnas pares no tiene sentido tener en cuenta lo que pase a más allás de un píxel de distancia del central. Por lo tanto vamos a tomar una máscara de tamaño tres y en consecuencia por los cálculos que hemos descrito anteriormente, tomamos un $\sigma$ menor que 1, mayor en menor en función del peso que queramos darle a cada uno de los píxeles que intervendrán en la convolución.\\
+Lo que hay que tener en cuenta es el sigma para el filtro de alisamiento, dado que vamos saltanto las columnas pares no tiene sentido tener en cuenta lo que pase a más allá de un píxel de distancia del central. Por lo tanto vamos a tomar una máscara de tamaño tres y en consecuencia por los cálculos que hemos descrito anteriormente, tomamos un $\sigma$ menor que 1, mayor o menor en función del peso que queramos darle a cada uno de los píxeles que intervendrán en la convolución.\\
 
-[Ejemplo piramide gato-perro]
+\begin{lstlisting}
+Mat submuestrear1C(Mat &im) {
+	int colOriginal = im.cols;
+	int filOriginal = im.rows;
 
-Aquí podemos ver el efecto que se busca en las imágenes híbridas.\\
+	Mat submuestreado = Mat(filOriginal / 2, colOriginal / 2, im.type());
+
+	for (int i = 0; i < submuestreado.rows; i++)
+		for (int j = 0; j < submuestreado.cols; j++)
+			submuestreado.at<float>(i, j) = im.at<float>(i*2+1, j*2+1);
+
+	return submuestreado;
+}
+
+void calcularPirGaussiana1C(Mat &im, vector<Mat> &piramide, int numNiveles) {
+
+	piramide.push_back(im);
+
+	for (int i = 1; i < numNiveles; i++)
+		piramide.push_back(submuestrear1C(convolucion2D1C(piramide.at(i-1), 0.5, 0)));
+}
+
+void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
+	Mat canalesIm[3];
+	Mat canalesNivel[3];
+	vector<Mat> canalesPiramide[3];
+
+	if (im.channels() == 1) 
+		calcularPirGaussiana1C(im, piramide, numNiveles);	
+	else if (im.channels() == 3) {
+		piramide.resize(numNiveles);
+		split(im, canalesIm);
+
+		for (int i = 0; i < 3; i++)
+			calcularPirGaussiana1C(canalesIm[i], canalesPiramide[i], numNiveles);		
+
+		for (int i = 0; i < numNiveles; i++) {
+			for (int j = 0; j < 3; j++)
+				canalesNivel[j] = canalesPiramide[j].at(i);
+
+			merge(canalesNivel, 3, piramide.at(i));
+		}
+
+	}
+	else
+		cout << "Numero de canales no valido." << endl;
+}
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=80mm]{apartadoC.PNG}
+\end{figure}
+
+Aquí podemos ver el efecto que se busca en las imágenes híbridas. En esta ocasión considero que he conseguido un efecto bastante bueno tras probar varios sigmas y decidir cuál de las dos imágenes usar para las frecuencias bajas y cuales las altas. Este ha sido el resultado final. En cambio por ejemplo para la híbrida entre Einstein y Marilyn ha no he logrado que quedase bien, siempre había algunas frecuencias que resaltaban y no debían resaltar.\\
 
 \section*{Bonus 1}
 
+Como ya hemos visto en teoría la forma más eficiente de implementar estas máscaras es usar la separabilidad y convolucionar por separado las filas y las columnas. Entonces lo que hemos hecho es simplemente funciones para obtener estas máscaras, evidentemente las parciales son simétricas, esto es, por ejemplo la primera parcial respecto x e y son iguales intercambiando los papeles de x e y.\\
+
+Por lo tanto solo hemos hecho una versión de cada función, si queremos usar estas máscara lo único que tendríamos que hacer es modificar un poco el código de Convolucion2D para que admita dos máscaras en los párametros, una para las filas y otra para las columnas.\\
+
+Como vemos obtenemos matrices filas pero ya hemos visto cómo usar matrices filas para todo sin más que trasponer.\\
+
+\begin{lstlisting}
+//Declaramos las funciones que intervienen en las mascaras y de las que por tanto muestrearemos.
+
+float parte1PrimeraDerivada (float x, float sigma) {
+	return 1/(2*M_PI*sigma*sigma)*(-x/(sigma*sigma))*exp(-(x*x)/(2*sigma*sigma));
+}
+
+float parte2PrimeraDerivada(float x, float sigma) {
+	return exp(-(x*x) / (2 * sigma*sigma));
+}
+
+float parte1SegundaDerivada(float x, float sigma) {
+	return (1 / (2 * M_PI*sigma*sigma)) * (((-1 / (sigma*sigma))*exp(-(x*x) / (2 * sigma*sigma))) + ((-x / (sigma*sigma)) * (-x / (sigma*sigma)) * exp(-(x*x) / (2 * sigma*sigma))));
+}
+
+float parte2SegundaDerivada(float x, float sigma) {
+	return exp(-(x*x) / (2 * sigma*sigma));
+}
+
+void calcularMascarasPrimeraDerivada(float sigma, Mat &parte1, Mat &parte2) {
+	parte1 = calcularVectorMascara(sigma, parte1PrimeraDerivada);
+	parte2 = calcularVectorMascara(sigma, parte2PrimeraDerivada);
+}
+
+void calcularMascarasSegundaDerivada(float sigma, Mat &parte1, Mat &parte2) {
+	parte1 = calcularVectorMascara(sigma, parte1SegundaDerivada);
+	parte2 = calcularVectorMascara(sigma, parte2SegundaDerivada);
+}
+\end{lstlisting}
 
 \end{document}

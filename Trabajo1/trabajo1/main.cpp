@@ -425,6 +425,10 @@ Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2, Mat &bajas
 	return bajas_frecuencias + altas_frecuencias;
 }
 
+/*
+Funcion que submuestrea una imagen tomando solo las columnas y filas impares.
+@im: la imagen CV_32F a submuestrear.
+*/
 Mat submuestrear1C(Mat &im) {
 	int colOriginal = im.cols;
 	int filOriginal = im.rows;
@@ -438,15 +442,26 @@ Mat submuestrear1C(Mat &im) {
 	return submuestreado;
 }
 
+/*
+Funcion que calcula una piramide Gaussiana para una imagen 1C dada.
+@im: la imagen CV_32F de partida.
+@piramide: el vector donde almacenamos la piramide.
+@numNiveles: el numero de niveles que calculamos de la piramide.
+*/
 void calcularPirGaussiana1C(Mat &im, vector<Mat> &piramide, int numNiveles) {
 
 	piramide.push_back(im);
-
 
 	for (int i = 1; i < numNiveles; i++)
 		piramide.push_back(submuestrear1C(convolucion2D1C(piramide.at(i-1), 0.5, 0)));
 }
 
+/*
+Funcion que calcula una piramide Gaussiana para una imagen 1C o 3C dada.
+@im: la imagen CV_32F o CV_32FC3 de partida.
+@piramide: el vector donde almacenamos la piramide.
+@numNiveles: el numero de niveles que calculamos de la piramide.
+*/
 void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 	Mat canalesIm[3];
 	Mat canalesNivel[3];
@@ -459,8 +474,7 @@ void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 		split(im, canalesIm);
 
 		for (int i = 0; i < 3; i++)
-			calcularPirGaussiana1C(canalesIm[i], canalesPiramide[i], numNiveles);
-		
+			calcularPirGaussiana1C(canalesIm[i], canalesPiramide[i], numNiveles);		
 
 		for (int i = 0; i < numNiveles; i++) {
 			for (int j = 0; j < 3; j++)
