@@ -273,6 +273,7 @@ Mat obtenerVectorOrlado1C(Mat &senal, Mat &mascara, int cond_contorno) {
 	//Nosotros vamos a trabajar con vectores fila, pero no sabemos como sera senal con lo que vamos a trasponerla si es necesario.
 	Mat copia_senal;
 
+	//Vamos a trabajar siempre con vectores fila.
 	if (senal.rows == 1)
 		copia_senal = senal;
 	else if (senal.cols == 1)
@@ -310,33 +311,42 @@ Mat obtenerVectorOrlado1C(Mat &senal, Mat &mascara, int cond_contorno) {
 
 }
 
+
+/*
+Funcion que calcula la convolucion de dos vectores fila.
+@senal: el vector al que le aplicamos la mascara de convolucion.
+@mascara: la mascara de convolucion.
+@cond_contorno: tipo de mecanismo para solucionar problemas con las dimensiones al convolucionar. Puede tomar dos valores:
+				0 -> uniforme a ceros.
+				1 -> reflejada.
+*/
 Mat calcularConvolucionVectores1C (Mat &senal, Mat &mascara, int cond_contorno) {
+	//preparamos el vector para la convolucion orlandolo.
 	Mat copiaOrlada = obtenerVectorOrlado1C(senal, mascara, cond_contorno);
 	Mat segmentoCopiaOrlada;
 	Mat convolucion = Mat(1, senal.cols, senal.type());
 
 	int inicio_copia, fin_copia, long_lado_orla;
+	//calculamos el rango de pixeles a los que realmente tenemos que aplicar la convolucion, excluyendo los vectores de orla.
 	inicio_copia = (mascara.cols - 1)/2;
-	fin_copia = inicio_copia + senal.cols; //poner para trasponer aqui
+	fin_copia = inicio_copia + senal.cols;
 	long_lado_orla = (mascara.cols - 1) / 2;
 
-	/*cout << "La copia de senal orlada es: " << endl;
-	mostrarMatriz(copiaOrlada);
-	cout << "La copia orlada tiene longitud: " << copiaOrlada.cols << endl;*/
-
 	for (int i = inicio_copia; i < fin_copia; i++) {
-		/*cout << "Segmento " << i - inicio_copia << endl;*/
+		//Vamos aplicando la convolucion a cada pixel seleccionando el segmento con el que convolucionamos.
 		segmentoCopiaOrlada = copiaOrlada.colRange(i - long_lado_orla, i + long_lado_orla + 1);
-		/*mostrarMatriz(segmentoCopiaOrlada);*/
 		convolucion.at<float>(0, i - inicio_copia) = mascara.dot(segmentoCopiaOrlada);
 	}
-	
-	/*cout << "El resultado de la convolucion es: " << endl;
-	mostrarMatriz(convolucion);*/
 
 	return convolucion;
 }
 
+/*
+Funcion que calcula la convolución de una imagen 1C con una mascara separada en un solo vector fila (por ser simetrica).
+@im: la imagen CV_32F a convolucionar.
+@sigma: el sigma de la mascara de convolucion.
+@cond_bordes: la condicion con la que se orlan los vectores filas/columnas para prepararlos para la convolucion.
+*/
 Mat convolucion2D1C(Mat &im, float sigma, int cond_bordes) {
 	Mat mascara = calcularVectorMascara(sigma, f); //calculamos la mascara a aplicar
 	Mat convolucion = Mat(im.rows, im.cols, im.type()); //matriz donde introducimos el resultado de la convolucion
@@ -356,9 +366,15 @@ Mat convolucion2D1C(Mat &im, float sigma, int cond_bordes) {
 	convolucion = convolucion.t(); //deshacemos la trasposicion para obtener el resultado final.
 
 	return convolucion;
-
 }
 
+
+/*
+Funcion que calcula la convolución de una imagen 1C o 3C con una mascara separada en un solo vector fila (por ser simetrica).
+@im: la imagen CV_32F o CV_32FC3 a convolucionar.
+@sigma: el sigma de la mascara de convolucion.
+@cond_bordes: la condicion con la que se orlan los vectores filas/columnas para prepararlos para la convolucion.
+*/
 Mat convolucion2D(Mat &im, float sigma, int cond_bordes) {
 	Mat convolucion;
 	Mat canales[3];
@@ -467,6 +483,29 @@ int main(int argc, char* argv[]) {
 
 	cout << "OpenCV detectada " << endl;	
 	
+	cout << "Apartado A. Mostramos la convolucion de una imagen para distintos sigmas." << endl;
+
+	Mat eins = imread("imagenes/data/einstein.bmp", 0);
+	eins.convertTo(eins, CV_32F);
+
+	Mat eins1 = convolucion2D(eins, 1, 0);
+	Mat eins2 = convolucion2D(eins, 2, 0);
+	Mat eins3 = convolucion2D(eins, 3, 0);
+
+	eins.convertTo(eins, CV_8U);
+	eins1.convertTo(eins1, CV_8U);
+	eins2.convertTo(eins2, CV_8U);
+	eins3.convertTo(eins3, CV_8U);
+
+	vector<Mat> apartadoA;
+
+	apartadoA.push_back(eins);
+	apartadoA.push_back(eins1);
+	apartadoA.push_back(eins2);
+	apartadoA.push_back(eins3);
+
+	mostrarImagenes("Apartado A", apartadoA);	
+
 	/*int numNiveles = 6;
 
 	Mat im1 = imread("imagenes/data/cat.bmp");
@@ -485,8 +524,7 @@ int main(int argc, char* argv[]) {
 		piramide.at(i).convertTo(piramide.at(i), CV_8UC3);	
 
 	mostrarImagenes("Piramide", piramide);*/
-
-	cout << M_PI << endl;
+	
 
 	waitKey();
 	destroyAllWindows();
