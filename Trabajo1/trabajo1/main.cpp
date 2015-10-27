@@ -3,6 +3,7 @@
 using namespace std;
 using namespace cv;
 
+# define M_PI           3.14159265358979323846
 
 void mostrarMatriz(Mat &m) {
 	for (int i = 0; i < m.rows; i++) {
@@ -29,6 +30,64 @@ Mat leeImagen(string nombreArchivo, int flagColor = 1) {
 	return imcargada;
 }
 
+/*
+Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion lineal.
+*/
+float cambioDeRango(float t, float a, float b, float c, float d) {
+	return 1.0 * (t - a) / (b - a)*(d - c) + c;
+}
+
+/*
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+@im: la imagen CV_32F a la que reajustaremos el rango.
+*/
+
+Mat reajustarRango1C(Mat im) {
+	float min = 0;
+	float max = 255;
+	Mat im_ajustada;
+
+
+	//Calculamos el rango en el que se mueven los valores de la imagen.
+	for (int i = 0; i < im.rows; i++)
+		for (int j = 0; j < im.cols; j++) {
+			if (im.at<float>(i, j) < min) min = im.at<float>(i, j);
+			if (im.at<float>(i, j) > max) max = im.at<float>(i, j);
+		}
+
+	im.copyTo(im_ajustada);
+
+	for (int i = 0; i < im_ajustada.rows; i++)
+		for (int j = 0; j < im_ajustada.cols; j++)
+			im_ajustada.at<float>(i, j) = cambioDeRango(im_ajustada.at<float>(i, j), min, max, 0.0, 255.0);
+
+
+	return im_ajustada;
+}
+
+/*
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+@im: la imagen CV_32F o CV_32FC3 a la que reajustaremos el rango.
+*/
+Mat reajustarRango(Mat im) {
+	Mat canales_im[3];
+	Mat im_ajustada;
+	Mat canales_ajustada[3];
+
+
+	if (im.channels() == 1)
+		im_ajustada = reajustarRango1C(im);
+	else if (im.channels() == 3) {
+		split(im, canales_im);
+		for (int i = 0; i < 3; i++)
+			canales_ajustada[i] = reajustarRango(canales_im[i]);
+		merge(canales_ajustada, 3, im_ajustada);
+	}
+	else
+		cout << "El numero de canales no es correcto." << endl;
+
+	return im_ajustada;
+}
 
 /*
 Funcion que muestra una imagen por pantalla.
@@ -44,6 +103,7 @@ void mostrarImagen(string nombreVentana, Mat &im, int tipoVentana = 1) {
 	else
 		cout << "La imagen no se cargo correctamente" << endl;
 }
+
 
 /*
 Funcion que combina varias imagenes en una sola.
@@ -108,10 +168,25 @@ float f(float x, float sigma) {
 	return exp(-0.5 * x * x / sigma / sigma);
 }
 
-/*TODO: Copiar aquí las funciones para muestrear*/
+//BONUS 1:
 
+//Declaramos las funciones que intervienen en las mascaras y de las que por tanto muestrearemos.
 
-/*TODO: Los códigos son evidentes*/
+float parte1PrimeraDerivada (float x, float sigma) {
+	return 1/(2*M_PI*sigma*sigma)*(-x/(sigma*sigma))*exp(-(x*x)/(2*sigma*sigma));
+}
+
+float parte2PrimeraDerivada(float x, float sigma) {
+	return exp(-(x*x) / (2 * sigma*sigma));
+}
+
+float parte1SegundaDerivada(float x, float sigma) {
+	return (1 / (2 * M_PI*sigma*sigma)) * (((-1 / (sigma*sigma))*exp(-(x*x) / (2 * sigma*sigma))) + ((-x / (sigma*sigma)) * (-x / (sigma*sigma)) * exp(-(x*x) / (2 * sigma*sigma))));
+}
+
+float parte2SegundaDerivada(float x, float sigma) {
+	return exp(-(x*x) / (2 * sigma*sigma));
+}
 
 /*
 Funcion que calcula un vector mascara para realizar la convolucion en base a un sigma dado.
@@ -160,6 +235,28 @@ Mat calcularVectorMascara(float sigma, float(*f)(float, float)) {
 	mascara = mascara / suma;
 
 	return mascara;
+}
+
+/*
+Funcion que calcula las dos mascaras en las que se puede descomponer la mascara 2D de la primera parcial (con respecto a x o y) de una Gaussiana.
+@sigma: el parametro sigma del que dependen las funciones de la mascara.
+@parte1: matriz donde se almacenara la primera parte de la mascara (la relacionada con la funcion parte1PrimeraDerivada).
+@parte2: matriz donde se almacenara la segunda parte de la mascara (la relacionada con la funcion parte2PrimeraDerivada).
+*/
+void calcularMascarasPrimeraDerivada(float sigma, Mat &parte1, Mat &parte2) {
+	parte1 = calcularVectorMascara(sigma, parte1PrimeraDerivada);
+	parte2 = calcularVectorMascara(sigma, parte2PrimeraDerivada);
+}
+
+/*
+Funcion que calcula las dos mascaras en las que se puede descomponer la mascara 2D de la segunda parcial (con respecto a x o y, dos veces) de una Gaussiana.
+@sigma: el parametro sigma del que dependen las funciones de la mascara.
+@parte1: matriz donde se almacenara la primera parte de la mascara (la relacionada con la funcion parte1SegundaDerivada).
+@parte2: matriz donde se almacenara la segunda parte de la mascara (la relacionada con la funcion parte2SegundaDerivada).
+*/
+void calcularMascarasSegundaDerivada(float sigma, Mat &parte1, Mat &parte2) {
+	parte1 = calcularVectorMascara(sigma, parte1SegundaDerivada);
+	parte2 = calcularVectorMascara(sigma, parte2SegundaDerivada);
 }
 
 
@@ -365,11 +462,12 @@ void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 		cout << "Numero de canales no valido." << endl;
 }
 
+
 int main(int argc, char* argv[]) {
 
 	cout << "OpenCV detectada " << endl;	
 	
-	int numNiveles = 6;
+	/*int numNiveles = 6;
 
 	Mat im1 = imread("imagenes/data/cat.bmp");
 	Mat im2 = imread("imagenes/data/dog.bmp");
@@ -386,8 +484,10 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < numNiveles; i++) 
 		piramide.at(i).convertTo(piramide.at(i), CV_8UC3);	
 
-	mostrarImagenes("Piramide", piramide);
-	
+	mostrarImagenes("Piramide", piramide);*/
+
+	cout << M_PI << endl;
+
 	waitKey();
 	destroyAllWindows();
 
