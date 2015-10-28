@@ -35,6 +35,7 @@ Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una tran
 */
 float cambioDeRango(float t, float a, float b, float c, float d) {
 	return 1.0 * (t - a) / (b - a)*(d - c) + c;
+	//return abs(t);
 }
 
 /*
@@ -488,7 +489,6 @@ void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 		cout << "Numero de canales no valido." << endl;
 }
 
-
 int main(int argc, char* argv[]) {
 
 	cout << "OpenCV detectada " << endl;	
@@ -496,7 +496,9 @@ int main(int argc, char* argv[]) {
 	cout << "Apartado A. Mostramos la convolucion de una imagen para distintos sigmas." << endl;
 
 	Mat eins = imread("imagenes/data/einstein.bmp", 0);
+	Mat mari = imread("imagenes/data/marilyn.bmp", 0);
 	eins.convertTo(eins, CV_32F);
+	mari.convertTo(mari, CV_32F);
 
 	Mat eins1 = convolucion2D(eins, 1, 0);
 	Mat eins2 = convolucion2D(eins, 2, 0);
@@ -525,30 +527,43 @@ int main(int argc, char* argv[]) {
 	Mat cat = imread("imagenes/data/cat.bmp");
 	Mat dog = imread("imagenes/data/dog.bmp");
 
+	eins.convertTo(eins, CV_32F);
 	cat.convertTo(cat, CV_32FC3);
 	dog.convertTo(dog, CV_32FC3);
 
-	Mat altas, bajas;
+	Mat altas, bajas, altasgris, bajasgris;
 
 	Mat imhibrida = calcularImHibrida(dog, cat, 3.5, 10, bajas, altas);
+	Mat imhibridagris = calcularImHibrida(eins, mari, 3.5, 10, bajasgris, altasgris);
 
 	int numNiveles = 6;
 	vector<Mat> piramide;
 
 	calcularPirGaussiana(imhibrida, piramide, numNiveles);
-
+	altas = reajustarRango(altas);
+	altasgris = reajustarRango(altasgris);
 
 	imhibrida.convertTo(imhibrida, CV_8UC3);
 	altas.convertTo(altas, CV_8UC3);
 	bajas.convertTo(bajas, CV_8UC3);
 
+	imhibridagris.convertTo(imhibridagris, CV_8U);
+	altasgris.convertTo(altasgris, CV_8U);
+	bajasgris.convertTo(bajasgris, CV_8U);
+
 	vector<Mat> apartadoB;
+	vector<Mat> apartadoBgris;
 
 	apartadoB.push_back(bajas);
 	apartadoB.push_back(imhibrida);
 	apartadoB.push_back(altas);
 
+	apartadoBgris.push_back(bajasgris);
+	apartadoBgris.push_back(imhibridagris);
+	apartadoBgris.push_back(altasgris);
+
 	mostrarImagenes("Apartado B", apartadoB);
+	mostrarImagenes("Apartado B grises", apartadoBgris);
 	
 
 	for (int i = 0; i < numNiveles; i++) 
