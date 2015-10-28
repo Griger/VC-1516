@@ -34,8 +34,7 @@ Mat leeImagen(string nombreArchivo, int flagColor = 1) {
 Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion lineal.
 */
 float cambioDeRango(float t, float a, float b, float c, float d) {
-	return 1.0 * (t - a) / (b - a)*(d - c) + c;
-	//return abs(t);
+	return 1.0 * (t - a) / (b - a)*(d - c) + c;	
 }
 
 /*
@@ -489,20 +488,84 @@ void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 		cout << "Numero de canales no valido." << endl;
 }
 
+/*
+Funcion para mostrar una imagen hibrida junto con las frecuencias altas y bajas que la forman.
+@im_hibrida: la imagen hibrida.
+@frecuencias_altas = las frecuencias altas que forman parte de la imagen.
+@frecuencias_bajas = las frecuencias bajas que forman parte de la imagen.
+@nombre_ventana = nombre de la ventana donde se mostraran las tres imagenes anteriores.
+*/
+void mostrarHibrida(Mat &im_hibrida, Mat &frecuencias_altas, Mat &frecuencias_bajas, string nombre_ventana) {
+	//Reajustamos el rango de las imagenes
+	im_hibrida = reajustarRango(im_hibrida);
+	frecuencias_altas = reajustarRango(frecuencias_altas);
+
+	//Hacemos la conversion para poder mostrar las imagenes.
+	if (im_hibrida.channels() == 3) {
+		im_hibrida.convertTo(im_hibrida, CV_8UC3);
+		frecuencias_altas.convertTo(frecuencias_altas, CV_8UC3);
+		frecuencias_bajas.convertTo(frecuencias_bajas, CV_8UC3);
+	}
+	else if (im_hibrida.channels() == 1) {
+		im_hibrida.convertTo(im_hibrida, CV_8U);
+		frecuencias_altas.convertTo(frecuencias_altas, CV_8U);
+		frecuencias_bajas.convertTo(frecuencias_bajas, CV_8U);
+	}
+	else
+		cout << "Numero de canales no valido" << endl;
+
+	vector<Mat> imagenes;
+
+	imagenes.push_back(frecuencias_altas);
+	imagenes.push_back(im_hibrida);
+	imagenes.push_back(frecuencias_bajas);
+
+	mostrarImagenes(nombre_ventana, imagenes);
+}
+
+/*
+Funcion para mostrar una piramide Gaussiana.
+@piramide: la piramide a mostrar.
+@nombre_ventana: el nombre de la ventana donde se mostrara la piramide.
+*/
+void mostrarPiramide(vector<Mat> piramide, string nombre_ventana) {
+
+	if (piramide.at(0).channels() == 3)
+		for (int i = 0; i < piramide.size(); i++)
+			piramide.at(i).convertTo(piramide.at(i), CV_8UC3);
+	else if (piramide.at(0).channels() == 1)
+		for (int i = 0; i < piramide.size(); i++)
+			piramide.at(i).convertTo(piramide.at(i), CV_8U);
+	else
+		cout << "Numero de canales no valido." << endl;
+
+	mostrarImagenes(nombre_ventana, piramide);
+}
+
 int main(int argc, char* argv[]) {
 
 	cout << "OpenCV detectada " << endl;	
 	
-	cout << "Apartado A. Mostramos la convolucion de una imagen para distintos sigmas." << endl;
-
 	Mat eins = imread("imagenes/data/einstein.bmp", 0);
-	Mat mari = imread("imagenes/data/marilyn.bmp", 0);
+	Mat cat = imread("imagenes/data/cat.bmp");
+	Mat dog = imread("imagenes/data/dog.bmp");
+
 	eins.convertTo(eins, CV_32F);
-	mari.convertTo(mari, CV_32F);
+	cat.convertTo(cat, CV_32FC3);
+	dog.convertTo(dog, CV_32FC3);
+	
 
 	Mat eins1 = convolucion2D(eins, 1, 0);
 	Mat eins2 = convolucion2D(eins, 2, 0);
 	Mat eins3 = convolucion2D(eins, 3, 0);
+
+	Mat altas, bajas;
+	Mat imhibrida = calcularImHibrida(dog, cat, 3.5, 10, bajas, altas);
+
+	int numNiveles = 6;
+	vector<Mat> piramide;
+
+	calcularPirGaussiana(imhibrida, piramide, numNiveles);
 
 	eins.convertTo(eins, CV_8U);
 	eins1.convertTo(eins1, CV_8U);
@@ -516,7 +579,10 @@ int main(int argc, char* argv[]) {
 	apartadoA.push_back(eins2);
 	apartadoA.push_back(eins3);
 
+	cout << "Apartado A. Mostramos la convolucion de una imagen para distintos sigmas." << endl;
+
 	mostrarImagenes("Apartado A", apartadoA);
+
 	cout << "Pulse ENTER para continuar..." << endl;
 
 	waitKey(0);
@@ -524,51 +590,8 @@ int main(int argc, char* argv[]) {
 
 	cout << "Apartado B. Mostramos la imagen hibrida entre el gato y el perro. Junto con las bajas y altas frecuencias que se han mezclado." << endl;
 
-	Mat cat = imread("imagenes/data/cat.bmp");
-	Mat dog = imread("imagenes/data/dog.bmp");
-
-	eins.convertTo(eins, CV_32F);
-	cat.convertTo(cat, CV_32FC3);
-	dog.convertTo(dog, CV_32FC3);
-
-	Mat altas, bajas, altasgris, bajasgris;
-
-	Mat imhibrida = calcularImHibrida(dog, cat, 3.5, 10, bajas, altas);
-	Mat imhibridagris = calcularImHibrida(eins, mari, 3.5, 10, bajasgris, altasgris);
-
-	int numNiveles = 6;
-	vector<Mat> piramide;
-
-	calcularPirGaussiana(imhibrida, piramide, numNiveles);
-	altas = reajustarRango(altas);
-	altasgris = reajustarRango(altasgris);
-
-	imhibrida.convertTo(imhibrida, CV_8UC3);
-	altas.convertTo(altas, CV_8UC3);
-	bajas.convertTo(bajas, CV_8UC3);
-
-	imhibridagris.convertTo(imhibridagris, CV_8U);
-	altasgris.convertTo(altasgris, CV_8U);
-	bajasgris.convertTo(bajasgris, CV_8U);
-
-	vector<Mat> apartadoB;
-	vector<Mat> apartadoBgris;
-
-	apartadoB.push_back(bajas);
-	apartadoB.push_back(imhibrida);
-	apartadoB.push_back(altas);
-
-	apartadoBgris.push_back(bajasgris);
-	apartadoBgris.push_back(imhibridagris);
-	apartadoBgris.push_back(altasgris);
-
-	mostrarImagenes("Apartado B", apartadoB);
-	mostrarImagenes("Apartado B grises", apartadoBgris);
-	
-
-	for (int i = 0; i < numNiveles; i++) 
-		piramide.at(i).convertTo(piramide.at(i), CV_8UC3);	
-
+	mostrarHibrida(imhibrida, altas, bajas, "Apartado B");
+		
 	cout << "Pulse ENTER para continuar..." << endl;
 
 	waitKey(0);
@@ -576,7 +599,7 @@ int main(int argc, char* argv[]) {
 
 	cout << "Apartado C: mostramos una piramide con la imagen hibrida anterior." << endl;
 
-	mostrarImagenes("Apartado C", piramide);	
+	mostrarPiramide(piramide, "Apartado C");
 
 	waitKey(0);
 	destroyAllWindows();

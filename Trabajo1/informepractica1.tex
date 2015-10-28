@@ -265,7 +265,7 @@ Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2, Mat &bajas
 }
 \end{lstlisting}
 
-Hemos hecho dos versiones para elegir si queremos o no queremos recuperar las imagenes de altas y bajas frecuencias para futuros cálculos y procedimientos con ellas.\\
+Hemos hecho dos versiones para elegir si queremos o no queremos recuperar las imágenes de altas y bajas frecuencias para futuros cálculos y procedimientos con ellas.\\
 
 \begin{figure}[H]
 \centering
@@ -273,6 +273,101 @@ Hemos hecho dos versiones para elegir si queremos o no queremos recuperar las im
 \end{figure}
 
 Para cada pareja de imágenes habrá que ajustar adecuadamente los sigmas de modo que el efecto sea el mejor posible.\\
+
+Como se menciona en el guión de prácticas al obtener la imagen híbrida y la de altas frecuencias estas pueden tomar valores negativos, con lo cual si lo casteásemos directamente a 8U estos valores se truncarían a cero no observándose correctamente las altas frecuencias. Lo que hemos hecho para evitar tal efecto es reajustar el rango de la valores de la imagen para ponerlo dentro del intervalo [0,255].\\
+
+\begin{lstlisting}
+/*
+Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion lineal.
+*/
+float cambioDeRango(float t, float a, float b, float c, float d) {
+	return 1.0 * (t - a) / (b - a)*(d - c) + c;	
+}
+
+/*
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+@im: la imagen CV_32F a la que reajustaremos el rango.
+*/
+
+Mat reajustarRango1C(Mat im) {
+	float min = 0;
+	float max = 255;
+	Mat im_ajustada;
+
+
+	//Calculamos el rango en el que se mueven los valores de la imagen.
+	for (int i = 0; i < im.rows; i++)
+		for (int j = 0; j < im.cols; j++) {
+			if (im.at<float>(i, j) < min) min = im.at<float>(i, j);
+			if (im.at<float>(i, j) > max) max = im.at<float>(i, j);
+		}
+
+	im.copyTo(im_ajustada);
+
+	for (int i = 0; i < im_ajustada.rows; i++)
+		for (int j = 0; j < im_ajustada.cols; j++)
+			im_ajustada.at<float>(i, j) = cambioDeRango(im_ajustada.at<float>(i, j), min, max, 0.0, 255.0);
+
+
+	return im_ajustada;
+}
+
+/*
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+@im: la imagen CV_32F o CV_32FC3 a la que reajustaremos el rango.
+*/
+Mat reajustarRango(Mat im) {
+	Mat canales_im[3];
+	Mat im_ajustada;
+	Mat canales_ajustada[3];
+
+
+	if (im.channels() == 1)
+		im_ajustada = reajustarRango1C(im);
+	else if (im.channels() == 3) {
+		split(im, canales_im);
+		for (int i = 0; i < 3; i++)
+			canales_ajustada[i] = reajustarRango(canales_im[i]);
+		merge(canales_ajustada, 3, im_ajustada);
+	}
+	else
+		cout << "El numero de canales no es correcto." << endl;
+
+	return im_ajustada;
+}
+\end{lstlisting}
+
+Hemos hecho también una función para mostrar una imagen híbrida junto con las imágenes de altas y bajas frecuencias que la forman. De este modo todo el preprocesamiento que hemos de hacer a las imágenes antes de mostrarlas, como el cambio de rango mencionado anteriormente lo hacemos dentro de una función haciendo el código más legible:\\
+
+\begin{lstlisting}
+void mostrarHibrida(Mat &im_hibrida, Mat &frecuencias_altas, Mat &frecuencias_bajas, string nombre_ventana) {
+	//Reajustamos el rango de las imagenes
+	im_hibrida = reajustarRango(im_hibrida);
+	frecuencias_altas = reajustarRango(frecuencias_altas);
+
+	//Hacemos la conversion para poder mostrar las imagenes.
+	if (im_hibrida.channels() == 3) {
+		im_hibrida.convertTo(im_hibrida, CV_8UC3);
+		frecuencias_altas.convertTo(frecuencias_altas, CV_8UC3);
+		frecuencias_bajas.convertTo(frecuencias_bajas, CV_8UC3);
+	}
+	else if (im_hibrida.channels() == 1) {
+		im_hibrida.convertTo(im_hibrida, CV_8U);
+		frecuencias_altas.convertTo(frecuencias_altas, CV_8U);
+		frecuencias_bajas.convertTo(frecuencias_bajas, CV_8U);
+	}
+	else
+		cout << "Numero de canales no valido" << endl;
+
+	vector<Mat> imagenes;
+
+	imagenes.push_back(frecuencias_altas);
+	imagenes.push_back(im_hibrida);
+	imagenes.push_back(frecuencias_bajas);
+
+	mostrarImagenes(nombre_ventana, imagenes);
+}
+\end{lstlisting}
 
 \section*{C. Pirámide Gaussiana}
 
@@ -334,7 +429,25 @@ void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
 \includegraphics[width=100mm]{apartadoC.PNG}
 \end{figure}
 
-Aquí podemos ver el efecto que se busca en las imágenes híbridas. En esta ocasión considero que he conseguido un efecto bastante bueno tras probar varios sigmas y decidir cuál de las dos imágenes usar para las frecuencias bajas y cuales las altas. Este ha sido el resultado final. En cambio por ejemplo para la híbrida entre Einstein y Marilyn ha no he logrado que quedase bien, siempre había algunas frecuencias que resaltaban y no debían resaltar.\\
+Aquí podemos ver el efecto que se busca en las imágenes híbridas. En esta ocasión considero que he conseguido un efecto bastante bueno tras probar varios sigmas y decidir cuál de las dos imágenes usar para las frecuencias bajas y cuales las altas. Este ha sido el resultado final. En cambio por ejemplo para la híbrida entre Einstein y Marilyn no he logrado que quedase bien, siempre había algunas frecuencias que resaltaban y no debían resaltar, por ejemplo la corbata.\\
+
+Del mismo modo que hemos hecho anteriormente tenemos una función para mostrar la pirámide gaussiana, esta vez no cambiamos el rango, si quisiéramos hacerlo no tenemos más que modificar el código un poco:\\
+
+\begin{lstlisting}
+void mostrarPiramide(vector<Mat> piramide, string nombre_ventana) {
+
+	if (piramide.at(0).channels() == 3)
+		for (int i = 0; i < piramide.size(); i++)
+			piramide.at(i).convertTo(piramide.at(i), CV_8UC3);
+	else if (piramide.at(0).channels() == 1)
+		for (int i = 0; i < piramide.size(); i++)
+			piramide.at(i).convertTo(piramide.at(i), CV_8U);
+	else
+		cout << "Numero de canales no valido." << endl;
+
+	mostrarImagenes(nombre_ventana, piramide);
+}
+\end{lstlisting}
 
 \section*{Bonus 1}
 
