@@ -546,9 +546,9 @@ int main(int argc, char* argv[]) {
 
 	cout << "OpenCV detectada " << endl;	
 	
-	Mat eins = imread("imagenes/data/einstein.bmp", 0);
-	Mat cat = imread("imagenes/data/cat.bmp");
-	Mat dog = imread("imagenes/data/dog.bmp");
+	Mat eins = imread("imagenes/einstein.bmp", 0);
+	Mat cat = imread("imagenes/cat.bmp");
+	Mat dog = imread("imagenes/dog.bmp");
 
 	eins.convertTo(eins, CV_32F);
 	cat.convertTo(cat, CV_32FC3);
