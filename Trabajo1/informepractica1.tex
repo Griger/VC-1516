@@ -58,12 +58,21 @@ Ya lo único que queda es muestrear la Gaussiana de párametro $\sigma$ y dividi
 Mat calcularVectorMascara(float sigma, float(*f)(float, float)) {
 	/*
 	Vamos a calcular el numero de pixeles que conformaran el vector mascara.
-	En primer lugar recordemos que necesitamos tener una mascara de orden impar, de modos que haremoa a*2 + 1, donde a es la siguiente cantidad:
-	Como sabemos para quedarnos con la parte significativa de la gaussiana tenemos que muestrear en el intervalor [-3sigma, 3sigma].
-	Ahora bien, podemos obtener numero decimales con lo que tendremos que redondear. Si hiciesemos la operacion 3*ceil(sigma)*2+1 obtendriamos mascaras de como minimo longitud 7 algo que no es del todo adeacuado.
-	Con lo cual vamos a optar por hacer un redondeo de la forma round(3*sigma)*2+1 y este sera el tama|\textit{ñ}|o de nuestra mascara. Ademas hemos introducido el 3 dentro del round porque de otro modo no seriamos tan precisos en el tama|\textit{ñ}|o requerido,
-	estariamos en una situacion similar a la anterior, mascaras de 1, luego de 7, sin ningun otro valor intermedio.
-	Dejamos el 2 fuera del round para asegurar de obtener una longitud impar, como queremos.
+	En primer lugar recordemos que necesitamos tener una mascara de orden impar,
+	de modos que haremoa a*2 + 1, donde a es la siguiente cantidad:
+	Como sabemos para quedarnos con la parte significativa de la gaussiana tenemos
+	que muestrear en el intervalor [-3sigma, 3sigma].
+	Ahora bien, podemos obtener numero decimales con lo que tendremos que redondear.
+	Si hiciesemos la operacion 3*ceil(sigma)*2+1 obtendriamos mascaras de como minimo
+	longitud 7 algo que no es del todo adeacuado.
+	Con lo cual vamos a optar por hacer un redondeo de la forma round(3*sigma)*2+1 y 
+	este sera el tama|\textit{ñ}|o de nuestra mascara. Ademas hemos introducido el 3
+	dentro del round porque de otro modo no seriamos tan precisos en el 
+	tama|\textit{ñ}|o requerido,
+	estariamos en una situacion similar a la anterior, mascaras de 1, luego de 7,
+	sin ningun otro valor intermedio.
+	Dejamos el 2 fuera del round para asegurar de obtener una longitud impar,
+	como queremos.
 	*/
 
 	int longitud = round(3 * sigma) * 2 + 1;
@@ -71,7 +80,8 @@ Mat calcularVectorMascara(float sigma, float(*f)(float, float)) {
 
 	/*
 	Ahora vamos a calcular el tamanio del paso de muestre, como vamos a ir muestreando.
-	Queremos que el mayor peso lo tenga el pixel central, con lo cual al este pixel le daremos el valor f(0).
+	Queremos que el mayor peso lo tenga el pixel central, con lo cual a este pixel le 
+	daremos el valor f(0).
 	En consecuencia el paso sera paso = 6sigma/(longitud-1).
 	*/
 
@@ -118,8 +128,10 @@ Una vez orlada la fila/columna a convolucionar con esta cantidad de píxeles (la
 
 \begin{lstlisting}
 Mat obtenerVectorOrlado1C(Mat &senal, Mat &mascara, int cond_contorno) {
-	//A|\textit{ñ}|adiremos digamos a cada lado del vector (longitud_senal - 1)/2 pues son los pixeles como maximo que sobrarian al situar la mascara en una esquina.
-	//Nosotros vamos a trabajar con vectores fila, pero no sabemos como sera senal con lo que vamos a trasponerla si es necesario.
+	//A|\textit{ñ}|adiremos digamos a cada lado del vector (longitud_senal - 1)/2
+	//pues son los pixeles como maximo que sobrarian al situar la mascara en una esquina.
+	//Nosotros vamos a trabajar con vectores fila, pero no sabemos como sera senal con lo
+	//que vamos a trasponerla si es necesario.
 	Mat copia_senal;
 
 	//Vamos a trabajar siempre con vectores fila.
@@ -138,7 +150,8 @@ Mat obtenerVectorOrlado1C(Mat &senal, Mat &mascara, int cond_contorno) {
 
 	Mat vectorOrlado = Mat(1, colsVectorOrlado, senal.type());
 
-	int inicio_copia, fin_copia; // <-- posiciones donde comienza la copia del vector, centrada.
+	int inicio_copia, fin_copia; // <-- posiciones donde comienza la copia del vector,
+	                             // centrada.
 
 	inicio_copia = pixels_extra/2;
 	fin_copia = colsParaCopia + inicio_copia;
@@ -149,11 +162,15 @@ Mat obtenerVectorOrlado1C(Mat &senal, Mat &mascara, int cond_contorno) {
 		vectorOrlado.at<float>(0, i) = copia_senal.at<float>(0, i-inicio_copia);		
 	
 	// Ahora rellenamos los vectores de orlado segun la tecnica que hayamos elegido;
-	// Hacemos el modo espejo solo que si la opcion elegida es cero entonces lo multiplicaremos por cero y en consecuencia sera el homogeneo a ceros.
+	// Hacemos el modo espejo solo que si la opcion elegida es cero entonces lo
+	// multiplicaremos por cero y en consecuencia sera el homogeneo a ceros.
 	
 	for (int i = 0; i < inicio_copia; i++) {
-		vectorOrlado.at<float>(0, inicio_copia - i - 1) = cond_contorno * vectorOrlado.at<float>(0, inicio_copia + i);
-		vectorOrlado.at<float>(0, fin_copia + i) = cond_contorno * vectorOrlado.at<float>(0, fin_copia - i - 1);
+		vectorOrlado.at<float>(0, inicio_copia - i - 1) = cond_contorno *
+		vectorOrlado.
+		at<float>(0, inicio_copia + i);
+		vectorOrlado.at<float>(0, fin_copia + i) = cond_contorno * 
+		vectorOrlado.at<float>(0, fin_copia - i - 1);
 	}
 
 	return vectorOrlado;
@@ -177,15 +194,19 @@ Mat calcularConvolucionVectores1C (Mat &senal, Mat &mascara, int cond_contorno) 
 	Mat convolucion = Mat(1, senal.cols, senal.type());
 
 	int inicio_copia, fin_copia, long_lado_orla;
-	//calculamos el rango de pixeles a los que realmente tenemos que aplicar la convolucion, excluyendo los vectores de orla.
+	//calculamos el rango de pixeles a los que realmente tenemos que aplicar la 
+	//convolucion, excluyendo los vectores de orla.
 	inicio_copia = (mascara.cols - 1)/2;
 	fin_copia = inicio_copia + senal.cols;
 	long_lado_orla = (mascara.cols - 1) / 2;
 
 	for (int i = inicio_copia; i < fin_copia; i++) {
-		//Vamos aplicando la convolucion a cada pixel seleccionando el segmento con el que convolucionamos.
-		segmentoCopiaOrlada = copiaOrlada.colRange(i - long_lado_orla, i + long_lado_orla + 1);
-		convolucion.at<float>(0, i - inicio_copia) = mascara.dot(segmentoCopiaOrlada);
+		//Vamos aplicando la convolucion a cada pixel seleccionando el segmento con
+		// el que convolucionamos.
+		segmentoCopiaOrlada = copiaOrlada.colRange(i - long_lado_orla, i +
+		long_lado_orla + 1);
+		convolucion.at<float>(0, i - inicio_copia) = 
+		mascara.dot(segmentoCopiaOrlada);
 	}
 
 	return convolucion;
@@ -199,18 +220,21 @@ Aquí simplemente aplicamos la convolución a una imagen, primero a las filas y 
 \begin{lstlisting}
 Mat convolucion2D1C(Mat &im, float sigma, int cond_bordes) {
 	Mat mascara = calcularVectorMascara(sigma, f); //calculamos la mascara a aplicar
-	Mat convolucion = Mat(im.rows, im.cols, im.type()); //matriz donde introducimos el resultado de la convolucion
+	Mat convolucion = Mat(im.rows, im.cols, im.type()); //matriz donde introducimos
+                                                        // el resultado de la convolucion
 
 	//Convolucion por filas
 	for (int i = 0; i < im.rows; i++) {
-		calcularConvolucionVectores1C(im.row(i), mascara, cond_bordes).copyTo(convolucion.row(i));
+		calcularConvolucionVectores1C(im.row(i), mascara, cond_bordes)
+		.copyTo(convolucion.row(i));
 	}
 
 	//Convolucion por columnas
 	convolucion = convolucion.t(); //trasponemos para poder operar como si fuese por filas
 
 	for (int i = 0; i < convolucion.rows; i++) {
-		calcularConvolucionVectores1C(convolucion.row(i), mascara, cond_bordes).copyTo(convolucion.row(i));
+		calcularConvolucionVectores1C(convolucion.row(i), mascara, 
+		cond_bordes).copyTo(convolucion.row(i));
 	}
 
 	convolucion = convolucion.t(); //deshacemos la trasposicion para obtener el resultado final.
@@ -257,7 +281,8 @@ Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2) {
 	return bajas_frecuencias + altas_frecuencias;
 }
 
-Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2, Mat &bajas_frecuencias, Mat &altas_frecuencias) {
+Mat calcularImHibrida(Mat &im1, Mat &im2, float sigma1, float sigma2, Mat &bajas_frecuencias,
+Mat &altas_frecuencias) {
 	bajas_frecuencias = convolucion2D(im1, sigma1, 0);
 	altas_frecuencias = im2 - convolucion2D(im2, sigma2, 0);
 
@@ -278,14 +303,16 @@ Como se menciona en el guión de prácticas al obtener la imagen híbrida y la d
 
 \begin{lstlisting}
 /*
-Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion lineal.
+Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion
+lineal.
 */
 float cambioDeRango(float t, float a, float b, float c, float d) {
 	return 1.0 * (t - a) / (b - a)*(d - c) + c;	
 }
 
 /*
-Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren
+correctamente las frencuencias altas (tanto negativas como positivas)
 @im: la imagen CV_32F a la que reajustaremos el rango.
 */
 
@@ -306,14 +333,16 @@ Mat reajustarRango1C(Mat im) {
 
 	for (int i = 0; i < im_ajustada.rows; i++)
 		for (int j = 0; j < im_ajustada.cols; j++)
-			im_ajustada.at<float>(i, j) = cambioDeRango(im_ajustada.at<float>(i, j), min, max, 0.0, 255.0);
+			im_ajustada.at<float>(i, j) =
+			cambioDeRango(im_ajustada.at<float>(i, j), min, max, 0.0, 255.0);
 
 
 	return im_ajustada;
 }
 
 /*
-Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente
+las frencuencias altas (tanto negativas como positivas)
 @im: la imagen CV_32F o CV_32FC3 a la que reajustaremos el rango.
 */
 Mat reajustarRango(Mat im) {
@@ -340,7 +369,8 @@ Mat reajustarRango(Mat im) {
 Hemos hecho también una función para mostrar una imagen híbrida junto con las imágenes de altas y bajas frecuencias que la forman. De este modo todo el preprocesamiento que hemos de hacer a las imágenes antes de mostrarlas, como el cambio de rango mencionado anteriormente lo hacemos dentro de una función haciendo el código más legible:\\
 
 \begin{lstlisting}
-void mostrarHibrida(Mat &im_hibrida, Mat &frecuencias_altas, Mat &frecuencias_bajas, string nombre_ventana) {
+void mostrarHibrida(Mat &im_hibrida, Mat &frecuencias_altas, Mat &frecuencias_bajas,
+string nombre_ventana) {
 	//Reajustamos el rango de las imagenes
 	im_hibrida = reajustarRango(im_hibrida);
 	frecuencias_altas = reajustarRango(frecuencias_altas);
@@ -394,7 +424,8 @@ void calcularPirGaussiana1C(Mat &im, vector<Mat> &piramide, int numNiveles) {
 	piramide.push_back(im);
 
 	for (int i = 1; i < numNiveles; i++)
-		piramide.push_back(submuestrear1C(convolucion2D1C(piramide.at(i-1), 0.5, 0)));
+		piramide.push_back(
+		submuestrear1C(convolucion2D1C(piramide.at(i-1), 0.5, 0)));
 }
 
 void calcularPirGaussiana(Mat &im, vector<Mat> &piramide, int numNiveles) {
@@ -458,7 +489,8 @@ Por lo tanto solo hemos hecho una versión de cada función, si queremos usar es
 Como vemos obtenemos matrices filas pero ya hemos visto cómo usar matrices filas para todo sin más que trasponer.\\
 
 \begin{lstlisting}
-//Declaramos las funciones que intervienen en las mascaras y de las que por tanto muestrearemos.
+//Declaramos las funciones que intervienen en las mascaras y de las que por 
+//tanto muestrearemos.
 
 float parte1PrimeraDerivada (float x, float sigma) {
 	return 1/(2*M_PI*sigma*sigma)*(-x/(sigma*sigma))*exp(-(x*x)/(2*sigma*sigma));
@@ -469,7 +501,9 @@ float parte2PrimeraDerivada(float x, float sigma) {
 }
 
 float parte1SegundaDerivada(float x, float sigma) {
-	return (1 / (2 * M_PI*sigma*sigma)) * (((-1 / (sigma*sigma))*exp(-(x*x) / (2 * sigma*sigma))) + ((-x / (sigma*sigma)) * (-x / (sigma*sigma)) * exp(-(x*x) / (2 * sigma*sigma))));
+	return (1 / (2 * M_PI*sigma*sigma)) * (((-1 / (sigma*sigma))*exp(-(x*x) /
+	(2 * sigma*sigma))) + ((-x / (sigma*sigma)) * (-x / (sigma*sigma)) * exp(-(x*x)
+	/ (2 * sigma*sigma))));
 }
 
 float parte2SegundaDerivada(float x, float sigma) {
