@@ -155,14 +155,16 @@ Mat convolucion2D1C(Mat &im, float sigma, int cond_bordes) {
 
 														//Convolucion por filas
 	for (int i = 0; i < im.rows; i++) {
-		calcularConvolucionVectores1C(im.row(i), mascara, cond_bordes).copyTo(convolucion.row(i));
+		Mat fila = im.row(i).clone();
+		calcularConvolucionVectores1C(fila, mascara, cond_bordes).copyTo(convolucion.row(i));
 	}
 
 	//Convolucion por columnas
 	convolucion = convolucion.t(); //trasponemos para poder operar como si fuese por filas
 
 	for (int i = 0; i < convolucion.rows; i++) {
-		calcularConvolucionVectores1C(convolucion.row(i), mascara, cond_bordes).copyTo(convolucion.row(i));
+		Mat fila = convolucion.row(i);
+		calcularConvolucionVectores1C(fila, mascara, cond_bordes).copyTo(fila);
 	}
 
 	convolucion = convolucion.t(); //deshacemos la trasposicion para obtener el resultado final.
