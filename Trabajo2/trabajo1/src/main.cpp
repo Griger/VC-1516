@@ -100,7 +100,7 @@ Mat obtenerMatrizCoeficientes(vector<Punto> puntos_origen, vector<Punto> puntos_
 }
 
 /*
-Obtenemos la matriz de trasnformacion que lleva una imagen a la otra, de forma aproximada:
+Función que obtiene la matriz de trasnformacion que lleva una imagen a la otra, de forma aproximada:
 @puntos_origen: puntos muestreados en la imagen de partida.
 @puntos_destino: puntos muestreados en la imagen de destino.
 */
@@ -121,6 +121,28 @@ Mat obtenerMatrizTransformacion(vector<Punto> puntos_origen, vector<Punto> punto
 			H.at<float>(i, j) = vt.at<float>(8, i * 3 + j);
 	
 	return H;
+}
+
+/*
+Función que obtiene los KeyPoints de una imagen con el detector BRISK
+@im: imagen a la que le calculamos sus KeyPoints
+@nombreVentana: nombre de la ventana donde mostrar la imagen GUSI: esto lo quitaré
+@umbral: parámetro de umbral (thresh) para el detector BRISK a usar.
+@octavas: parámetro de octavas (octaves) para el detector BRISK a usar.
+@escalaDePatron: parámetro de escala del patrón (patternScale) para el detector BRISK a usar.
+*/
+
+void obtenerKeyPointsBRISK (Mat im, string nombreVentana, int umbral = 30, int octavas = 3, float escalaDePatron = 1.0f) {
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral, octavas, escalaDePAtron);
+	vector<KeyPoint> puntosDetectados;
+	Mat imConKeyPointsDibujados;
+	
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+	
+	drawKeypoints(im, puntosDetectados, imConKeyPointsDibujados);
+	
+	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
+	imshow(nombreVentana, imConKeyPointsDibujados);
 }
 
 
@@ -172,19 +194,16 @@ int main(int argc, char* argv[]) {
 
 	mostrarImagenes("Calcular homografia (Aparado 1):", imagenes);*/
 	
+	//Cargamos las imagenes para los apartados 2 y 3:
 	Mat yose1 = imread("imagenes/Yosemite1.jpg");
+	Mat yose2 = imread("imagenes/Yosemite2.jpg");
+	
+	//Las mostramos para ver que se han cargado correctamente (GUSI quitar):
 	imshow("Yose1", yose1);
-	Ptr<BRISK> detectorBRISK = BRISK::create();
-	vector<KeyPoint> puntosDetectados1;
+	imshow("Yose2", yose2);	
 	
-	detectorBRISK->detect(yose1, puntosDetectados1);
-	
-	Mat yose1_conKeyPoints;
-	
-	drawKeypoints(yose1, puntosDetectados1, yose1_conKeyPoints);
-	
-	cout << "Hemos obtenido: " << puntosDetectados1.size() << " puntos." << endl;
-	imshow("Yose1 con KeyPoints", yose1_conKeyPoints);
+	obtenerKeyPointsBRISK(yose1, "KPYose1BRISK");
+	obtenerKeyPointsBRISK(yose2, "KPYose2BRISK");
 
 
 
