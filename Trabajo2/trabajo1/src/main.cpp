@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
 
 	cout << "OpenCV detectada " << endl;	
 	
-	Mat tablero1 = imread("imagenes/Tablero1.jpg");
+	/*Mat tablero1 = imread("imagenes/Tablero1.jpg");
 	Mat tablero2 = imread("imagenes/Tablero2.jpg");
 	
 	vector<Punto> ptos_tablero1;
@@ -170,20 +170,26 @@ int main(int argc, char* argv[]) {
 	imagenes.push_back(tablero2);
 	
 
-	mostrarImagenes("Calcular homografia (Aparado 1):", imagenes);
-
-	Mat yosemite1 = imread("imagenes/Yosemite1.jpg", 0);
-	vector<KeyPoint> kp;
-	Ptr<BRISK> ptrbrisk_yosem = BRISK::create();
-	Mat descriptor;
-	ptrbrisk_yosem->detect(yosemite1, kp);
-	ptrbrisk_yosem->compute(yosemite1, kp, descriptor);
-
-	cout << "Acaba el codigo de Bel" << endl;
+	mostrarImagenes("Calcular homografia (Aparado 1):", imagenes);*/
 	
+	Mat yose1 = imread("imagenes/Yosemite1.jpg");
+	imshow("Yose1", yose1);
+	Ptr<BRISK> detectorBRISK = BRISK::create();
+	vector<KeyPoint> puntosDetectados1;
+	
+	detectorBRISK->detect(yose1, puntosDetectados1);
+	
+	Mat yose1_conKeyPoints;
+	
+	drawKeypoints(yose1, puntosDetectados1, yose1_conKeyPoints);
+	
+	cout << "Hemos obtenido: " << puntosDetectados1.size() << " puntos." << endl;
+	imshow("Yose1 con KeyPoints", yose1_conKeyPoints);
+
+
+
 	waitKey(0);
 	destroyAllWindows();
 
-	system("PAUSE");
 	return 0;
 }
