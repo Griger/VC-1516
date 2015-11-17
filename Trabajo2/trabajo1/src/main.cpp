@@ -77,7 +77,7 @@ public:
 };
 
 /*
-Funcion que obtiene la matriz de coeficientes para el sistema del calculo de la homografia dados los puntos muestreados en las imágenes estudiadas.
+Funcion que obtiene la matriz de coeficientes para el sistema del calculo de la homografia dados los puntos muestreados en las imï¿½genes estudiadas.
 @puntos_origen: puntos muestreados en la imagen de partida.
 @puntos_destino: puntos muestreados en la imagen de destino.
 */
@@ -100,7 +100,7 @@ Mat obtenerMatrizCoeficientes(vector<Punto> puntos_origen, vector<Punto> puntos_
 }
 
 /*
-Función que obtiene la matriz de trasnformacion que lleva una imagen a la otra, de forma aproximada:
+Funciï¿½n que obtiene la matriz de trasnformacion que lleva una imagen a la otra, de forma aproximada:
 @puntos_origen: puntos muestreados en la imagen de partida.
 @puntos_destino: puntos muestreados en la imagen de destino.
 */
@@ -119,44 +119,61 @@ Mat obtenerMatrizTransformacion(vector<Punto> puntos_origen, vector<Punto> punto
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			H.at<float>(i, j) = vt.at<float>(8, i * 3 + j);
-	
+
 	return H;
 }
 
 /*
-Función que obtiene los KeyPoints de una imagen con el detector BRISK
-@im: imagen a la que le calculamos sus KeyPoints
-@nombreVentana: nombre de la ventana donde mostrar la imagen GUSI: esto lo quitaré
-@umbral: parámetro de umbral (thresh) para el detector BRISK a usar.
-@octavas: parámetro de octavas (octaves) para el detector BRISK a usar.
-@escalaDePatron: parámetro de escala del patrón (patternScale) para el detector BRISK a usar.
+Funcion que obtiene los KeyPoints de una imagen con el detector BRISK.
+@im: imagen a la que le calculamos los KeyPoints
+@umbral: parametro de umbral (thresh) para el detector BRISK a usar.
+@octavas: parametro de octavas (octaves) para el detector BRISK a usar.
+@escalaDePatron: parametro de escala del patron (patternScale) para el detector BRISK a usar.
 */
 
-void obtenerKeyPointsBRISK (Mat im, string nombreVentana, int umbral = 30, int octavas = 3, float escalaDePatron = 1.0f) {
+vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30, int octavas = 3, float escalaDePatron = 1.0f) {
 	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral, octavas, escalaDePAtron);
 	vector<KeyPoint> puntosDetectados;
-	Mat imConKeyPointsDibujados;
-	
+
 	ptrDetectorBRISK->detect(im, puntosDetectados);
-	
-	drawKeypoints(im, puntosDetectados, imConKeyPointsDibujados);
-	
+
 	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
-	imshow(nombreVentana, imConKeyPointsDibujados);
+
+	return puntos;
+}
+
+/*
+Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
+@im: imagen a la que le calculamos los KeyPoints
+*/
+vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, float factor_escala = 1.2f, int num_niveles = 8, int umbral_borde = 31, int WTA_K = 2, int tamano_area = 31, int umbral_rapido = 20, int tipo_marcador = ORB::HARRIS_SCORE){
+	Ptr<ORB> prtDetectorORB = ORB::create(num_caracteristicas, factor_escala, num_niveles, umbral_borde, 0, WTA_K, tipo_marcador, tamano_area, umbral_rapido);
+	vector<KeyPoint> puntosDetectados;
+
+	ptrDetectorORB->detect(im, puntosDetectados);
+
+	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
+
 }
 
 
 
 int main(int argc, char* argv[]) {
 
-	cout << "OpenCV detectada " << endl;	
-	
+	cout << "OpenCV detectada " << endl;
+
+/*
+=====================================
+PARTE 1: ESTIMACION DE LA HOMOGRAFIA
+=====================================
+*/
+
 	/*Mat tablero1 = imread("imagenes/Tablero1.jpg");
 	Mat tablero2 = imread("imagenes/Tablero2.jpg");
-	
+
 	vector<Punto> ptos_tablero1;
 	vector<Punto> ptos_tablero2;
-	
+
 	//Almacenamos las coordenadas de los ptos en correspondencia que hemos muestreado de cada imagen:
 	ptos_tablero1.push_back(Punto(175, 70));
 	ptos_tablero1.push_back(Punto(532, 41));
@@ -184,26 +201,43 @@ int main(int argc, char* argv[]) {
 	Mat tablero1_transformada;
 
 	warpPerspective(tablero1, tablero1_transformada, H, Size(tablero2.cols, tablero2.rows));
-	
+
 	vector<Mat> imagenes;
-	
+
 	imagenes.push_back(tablero1);
 	imagenes.push_back(tablero1_transformada);
 	imagenes.push_back(tablero2);
-	
+
 
 	mostrarImagenes("Calcular homografia (Aparado 1):", imagenes);*/
-	
+
+/*
+==========================
+PARTE 2: EXTRAER KEYPOINTS
+==========================
+*/
+
 	//Cargamos las imagenes para los apartados 2 y 3:
 	Mat yose1 = imread("imagenes/Yosemite1.jpg");
 	Mat yose2 = imread("imagenes/Yosemite2.jpg");
-	
+
 	//Las mostramos para ver que se han cargado correctamente (GUSI quitar):
 	imshow("Yose1", yose1);
-	imshow("Yose2", yose2);	
-	
-	obtenerKeyPointsBRISK(yose1, "KPYose1BRISK");
-	obtenerKeyPointsBRISK(yose2, "KPYose2BRISK");
+	imshow("Yose2", yose2);
+
+	vector<KeyPoint> puntosDetectados; //donde almacenaremos los puntos detectados para cada imagen por cada criterio, reutilizable.
+	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPBRISK; //las imagenes correspondientes pintando los puntos detectados.
+
+	puntosDetectados = obtenerKeyPointsBRISK(yose1);
+	drawKeyPoints(yose1, puntosDetectados, yose1KPBRISK);
+	puntosDetectados = obtenerKeyPointsORB(yose1);
+	drawKeyPoints(yose1, puntosDetectados, yose1KPORB);
+	puntosDetectados = obtenerKeyPointsBRISK(yose2);
+	drawKeyPoints(yose2, puntosDetectados, yose2KPBRISK);
+	puntosDetectados = obtenerKeyPointsORB(yose2);
+	drawKeyPoints(yose2, puntosDetectados, yose2KPORB);
+
+
 
 
 
