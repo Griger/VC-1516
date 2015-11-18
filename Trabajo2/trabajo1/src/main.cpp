@@ -242,25 +242,23 @@ PARTE 2: EXTRAER KEYPOINTS
 ==========================
 */
 
-	/*//Cargamos las imagenes para los apartados 2 y 3:
+	//Cargamos las imagenes para los apartados 2 y 3:
 	Mat yose1 = imread("imagenes/Yosemite1.jpg");
 	Mat yose2 = imread("imagenes/Yosemite2.jpg");
 
-	//Las mostramos para ver que se han cargado correctamente (GUSI quitar):
-	imshow("Yose1", yose1);
-	imshow("Yose2", yose2);
-
 	vector<KeyPoint> puntosDetectados; //donde almacenaremos los puntos detectados para cada imagen por cada criterio, reutilizable.
-	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPBRISK; //las imagenes correspondientes pintando los puntos detectados.
+	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPORB; //las imagenes correspondientes pintando los puntos detectados.
 
-	puntosDetectados = obtenerKeyPointsBRISK(yose1);
-	drawKeyPoints(yose1, puntosDetectados, yose1KPBRISK);
-	puntosDetectados = obtenerKeyPointsORB(yose1);
-	drawKeyPoints(yose1, puntosDetectados, yose1KPORB);
-	puntosDetectados = obtenerKeyPointsBRISK(yose2);
-	drawKeyPoints(yose2, puntosDetectados, yose2KPBRISK);
+	puntosDetectados = obtenerKeyPointsBRISK(yose1, 10);
+	drawKeypoints(yose1, puntosDetectados, yose1KPBRISK);
+	imshow("Yose 1 KP BRISK", yose1KPBRISK);
+	/*puntosDetectados = obtenerKeyPointsORB(yose1);
+	drawKeypoints(yose1, puntosDetectados, yose1KPORB);
+	imshow("Yose 1 KP ORB", yose1KPORB);*/
+	/*puntosDetectados = obtenerKeyPointsBRISK(yose2);
+	drawKeypoints(yose2, puntosDetectados, yose2KPBRISK);
 	puntosDetectados = obtenerKeyPointsORB(yose2);
-	drawKeyPoints(yose2, puntosDetectados, yose2KPORB);*/
+	drawKeypoints(yose2, puntosDetectados, yose2KPORB);*/
 
 
 
