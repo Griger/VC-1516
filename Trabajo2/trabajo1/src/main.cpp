@@ -197,6 +197,29 @@ PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 	ptos_tablero2.push_back(Punto(306, 125));
 	ptos_tablero2.push_back(Punto(305, 377));
 
+	//Aquí hacemos lo mismo sólo que ahora lo hacemos con los puntos para el experimento con puntos no adecuados:
+	ptos_tablero1.push_back(Punto(157, 47));
+	ptos_tablero1.push_back(Punto(177, 47));
+	ptos_tablero1.push_back(Punto(155, 73));
+	ptos_tablero1.push_back(Punto(175, 71));
+	ptos_tablero1.push_back(Punto(199, 44));
+	ptos_tablero1.push_back(Punto(223, 43));
+	ptos_tablero1.push_back(Punto(197, 68));
+	ptos_tablero1.push_back(Punto(153, 94));
+	ptos_tablero1.push_back(Punto(174, 95));
+	ptos_tablero1.push_back(Punto(153, 119));
+
+	ptos_tablero2.push_back(Punto(149, 14));
+	ptos_tablero2.push_back(Punto(174, 20));
+	ptos_tablero2.push_back(Punto(142, 40));
+	ptos_tablero2.push_back(Punto(167, 46));
+	ptos_tablero2.push_back(Punto(198, 25));
+	ptos_tablero2.push_back(Punto(223, 30));
+	ptos_tablero2.push_back(Punto(191, 51));
+	ptos_tablero2.push_back(Punto(137, 64));
+	ptos_tablero2.push_back(Punto(163, 69));
+	ptos_tablero2.push_back(Punto(131, 90));
+
 	Mat H = obtenerMatrizTransformacion(ptos_tablero1, ptos_tablero2);
 	Mat tablero1_transformada;
 
