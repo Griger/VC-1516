@@ -99,8 +99,81 @@ Y aquí tenemos el resultado obtenido comparado con la imagen Tablero2:\\
 
 Como podemos ver "la posición del tablero" es muy similar a la del Tablero2, ahora bien lo primero que aprenciamos son los cortes negros producto de los puntos que caen fuera del rango de la imagen de destino por la homografía y en segundo lugar notamos lo que no podemos hacer simplemente con geometría y es el color de la imagen, es distinto, nosotros sólo estamos mapeando puntos de la imagen sobre otra no estamos cambiando el valor de dichos píxeles. Además de que por supuesto el resultado no es exacto.\\
 
-Veamos ahora lo que obtenemos cuando los puntos en correspondencias seleccionados se toman en 3 cuadrados contiguos de una esquina, es esperable que el resultado sea peor puesto que la información que le damos no es tan buena ya que los puntos están más concetrados y por tanto el área de aplicación que "conocemos" de la homografía es más pequeña dando origen posiblemente a más ambigüedades. Aquí tenemos el resultado:\\
+Veamos ahora lo que obtenemos cuando los puntos en correspondencias seleccionados se toman en 3 cuadrados contiguos de una esquina, es esperable que el resultado sea peor puesto que la información que le damos no es tan buena ya que los puntos están más concetrados y por tanto el área de aplicación que "conocemos" de la homografía es más pequeña dando origen posiblemente a más ambigüedades. Aquí tenemos los puntos elegidos:\\
 
+\begin{figure}[H]
+\centering
+\subfigure[Puntos elegidos en Tablero 1]{\includegraphics[width=70mm]{Imagenes/ptosTablero1Malos.png}}
+\subfigure[Puntos elegidos en Tablero 2]{\includegraphics[width=70mm]{Imagenes/ptosTablero2Malos.png}}
+\caption{Puntos seleccionados en cada imagen en azul.}
+\end{figure}
+
+Y aquí mostramos el resultado que obtenemos al estimar la homografía usando estos puntos en correspondencias:\\
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=140mm]{Imagenes/P1resultadomalo.png}
+\end{figure}
+
+Es claro que el resultado obtenido es mucho peor, los tres cuadrados donde hemos tomados puntos quedan más o menos bien, algo que era de esperar ya que la homografía calculada se basa en la información de ellos tres pero el resto de la imagen no se asemeja prácticamente nada a la de Tablero2, mientras que antes sí que habíamos obtenido un parecido bastante razonable. Como podemos ver se ha producido una cizalla además de un escalado ya que los puntos tomados están muy próximos a los otros con lo cual parece lógico (aunque esto no deja de ser conjetural puesto que lo que estamos haciendo es estimar una homografía de manera aproximada) que lo que está ocurriendo es que se interpreta es que se agrupan de este modo todos los puntos de la imagen para que "quepan" en la esquina en correspondencias.\\
+
+\textbf{Nota:} si se quieren ver los puntos exactos que hemos tomado en la imagen para estimar ambas homografías se pueden ver en el main del archivo main.cpp.
 \section{Búsqueda de KeyPoints con los detectores BRISK y ORB}
+
+En primer lugar vamos a probar el detector BRISK con los parámetros por defecto para ello hemos elaborado la siguiente función a la que le pasamos los parámetros para el detector BRISK con valor por defecto aquellos que vienen en la documentación de openCV:\\
+
+\begin{lstlisting}
+vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30, int octavas = 3, 
+float escalaDePatron = 1.0f) {
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral, octavas, escalaDePatron);
+	vector<KeyPoint> puntosDetectados;
+
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+
+	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
+
+	return puntosDetectados;
+}
+\end{lstlisting}
+
+Lo único que hacemos en esta función es crear un puntero a un detector BRISK con los parámetros que le pasamos y extraer con él los KeyPoints (estructura de openCV para obtener puntos de interés de una imagen con un decriptor) de la imagen \textit{im} que le pasamos por defecto. Mostramos el número de puntos que obtenemos para saber cómo están afectando los parámetros al número de puntos seleccionados y devolvemos el vector de KeyPints encontrados por el detector para futuros cálculos, como por ejemplo poder pintarlos en la imagen.\\
+
+Con estos parámetros tenemos que se obtienen 6218 puntos una cantidad demasiado grande de puntos para nuestros propósitos, además como sabemos en algunos casos, no sólo por el coste computacional, tener tantos datos puede ser contraproducente. Lo que haremos a continuación es modificar los parámetros del detector que creamos para que el número de puntos obtenidos sea aproximadamente 1000 (que es la cantidad que dijimos en clase que sería adecuada). Aquí tenemos todos los puntos obtenidos pintados en la imagen para ello hacemos uso de la función drawKeypoints como vemos a continuación:\\
+
+\begin{lstlisting}
+puntosDetectados = obtenerKeyPointsBRISK(yose1, 10);
+drawKeypoints(yose1, puntosDetectados, yose1KPBRISK);
+imshow("Yose 1 KP BRISK", yose1KPBRISK);
+\end{lstlisting}
+
+En lo sucesivo no vamos a mostrar más este código pese a que cambiemos de imagen o de detector ya que para todos es el mismo, sólo tenemos que obtener el listado de KeyPoints encontrados por el detector que estemos usando en ese momento y pasárselo a la función drawKeypoints junto a la imagen sobre la que queremos mostrarlos (la imagen a la que se los hemos calculado obviamente).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=90mm]{Imagenes/yose1KPBRISKpordefecto.png}
+\end{figure}
+
+
+Al contrario que lo que sucedía con BRISK cuando aplicamos los parámetros por defecto de ORB obtenemos muchos menos puntos, sólo 500. Para usar este detector hemos declarado la siguiente función que nuevamente tiene los parámetros de este descriptor con los valores por defecto que aparecen en la documentación de openCV. Aquí tenemos dibujados los puntos detectados con un descriptor ORB con los valores por defecto:\\
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=90mm]{Imagenes/yose1KPORBpordefecto.png}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
 \end{document}
+
+
 
