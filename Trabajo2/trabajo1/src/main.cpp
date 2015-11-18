@@ -132,14 +132,14 @@ Funcion que obtiene los KeyPoints de una imagen con el detector BRISK.
 */
 
 vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30, int octavas = 3, float escalaDePatron = 1.0f) {
-	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral, octavas, escalaDePAtron);
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral, octavas, escalaDePatron);
 	vector<KeyPoint> puntosDetectados;
 
 	ptrDetectorBRISK->detect(im, puntosDetectados);
 
 	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
 
-	return puntos;
+	return puntosDetectados;
 }
 
 /*
@@ -147,12 +147,14 @@ Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
 @im: imagen a la que le calculamos los KeyPoints
 */
 vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, float factor_escala = 1.2f, int num_niveles = 8, int umbral_borde = 31, int WTA_K = 2, int tamano_area = 31, int umbral_rapido = 20, int tipo_marcador = ORB::HARRIS_SCORE){
-	Ptr<ORB> prtDetectorORB = ORB::create(num_caracteristicas, factor_escala, num_niveles, umbral_borde, 0, WTA_K, tipo_marcador, tamano_area, umbral_rapido);
+	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, factor_escala, num_niveles, umbral_borde, 0, WTA_K, tipo_marcador, tamano_area, umbral_rapido);
 	vector<KeyPoint> puntosDetectados;
 
 	ptrDetectorORB->detect(im, puntosDetectados);
 
 	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
+	
+	return puntosDetectados;
 
 }
 
@@ -167,8 +169,8 @@ int main(int argc, char* argv[]) {
 PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 =====================================
 */
-
-	/*Mat tablero1 = imread("imagenes/Tablero1.jpg");
+	/*
+	Mat tablero1 = imread("imagenes/Tablero1.jpg");
 	Mat tablero2 = imread("imagenes/Tablero2.jpg");
 
 	vector<Punto> ptos_tablero1;
@@ -240,7 +242,7 @@ PARTE 2: EXTRAER KEYPOINTS
 ==========================
 */
 
-	//Cargamos las imagenes para los apartados 2 y 3:
+	/*//Cargamos las imagenes para los apartados 2 y 3:
 	Mat yose1 = imread("imagenes/Yosemite1.jpg");
 	Mat yose2 = imread("imagenes/Yosemite2.jpg");
 
@@ -258,7 +260,7 @@ PARTE 2: EXTRAER KEYPOINTS
 	puntosDetectados = obtenerKeyPointsBRISK(yose2);
 	drawKeyPoints(yose2, puntosDetectados, yose2KPBRISK);
 	puntosDetectados = obtenerKeyPointsORB(yose2);
-	drawKeyPoints(yose2, puntosDetectados, yose2KPORB);
+	drawKeyPoints(yose2, puntosDetectados, yose2KPORB);*/
 
 
 
