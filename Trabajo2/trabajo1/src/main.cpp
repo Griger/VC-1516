@@ -253,9 +253,16 @@ Funcion que obtiene un mosaico de proyeccion plana de dos imagenes
 */
 
 void mosaicoDeDos (Mat im1, Mat im2, int umbral) {
-	int cols_mosaico = 2*(im1.cols + im2.cols);
-	int filas_mosaico = 2*(im1.rows + im2.rows);
+	int cols_mosaico = 2*im1.cols;
+	int filas_mosaico = 2*im1.rows;
 	Mat mosaico = Mat(filas_mosaico, cols_mosaico, im1.type());
+	vector<DMatch> matches;
+	vector<KeyPoint> puntosDetectadosOrigen, puntosDetectadosDestino;
+	vector<Point2f> puntosCorrespondenciasOrigen, puntosCorrespondenciasDestino;
+	
+	//Obtenemos los puntos clave con BRISK en cada imagen:
+	puntosDetectadosOrigen = obtenerKeyPointsBRISK(im2, umbral);
+	puntosDetectadosDestino = obtenerKeyPointsBRISK(im1, umbral);
 	
 	//Colocamos la primera imagen en la esquina superior izquierda por medio de la identidad:
 	Mat id = Mat(3,3,CV_32F,0.0);
@@ -263,7 +270,18 @@ void mosaicoDeDos (Mat im1, Mat im2, int umbral) {
 	for (int i = 0; i < 3; i++)
 		id.at<float>(i,i) = 1.0;
 		
-	warpPerspective(im1, mosaico, id, Size(mosaico.cols, mosaico.rows));
+	warpPerspective(im1, mosaico, id, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
+	
+	matches = obtenerMatchesFuerzaBruta (im2, im1, 65);
+	
+	for (int i = 0; i < matches.size(); i++){
+		puntosCorrespondenciasOrigen.push_back(puntosDetectadosOrigen[matches[i].queryIdx].pt);
+		puntosCorrespondenciasDestino.push_back(puntosDetectadosDestino[matches[i].trainIdx].pt);	
+	}
+	
+	Mat homografia = findHomography(puntosCorrespondenciasOrigen, puntosCorrespondenciasDestino, CV_RANSAC);
+	
+	warpPerspective(im2, mosaico, homografia, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
 	
 	imshow("Mosaico", mosaico);
 
