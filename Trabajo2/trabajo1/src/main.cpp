@@ -191,6 +191,40 @@ vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
 	return matches;
 }
 
+/*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio Flann
+@im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
+@umbral: el umbral para el detector BRISK.
+*/
+vector<DMatch> obtenerMatchesFlann (Mat im1, Mat im2, int umbral){
+	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
+	Mat descriptores1, descriptores2, imagenMatches;
+	vector<DMatch> matches;
+	
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	FlannBasedMatcher matcher;
+	
+	puntosDetectados1 = obtenerKeyPointsBRISK(im1, umbral);
+	puntosDetectados2 = obtenerKeyPointsBRISK(im2, umbral);
+	
+	
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
+	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
+	
+	matcher.match(descriptores1, descriptores2, matches);
+	
+	drawMatches( im1, puntosDetectados1, im2, puntosDetectados2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1),                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	imshow("Matches Flann", imagenMatches);
+	
+	
+	
+	return matches;
+}
+
+
+
 
 /*
 Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
@@ -208,6 +242,31 @@ vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int
 	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
 	
 	return puntosDetectados;
+
+}
+
+
+/*
+Funcion que obtiene un mosaico de proyeccion plana de dos imagenes
+@im1 e im2: imagenes con las que formar el mosaico.
+@umbral: el umbral para el destector BRISK (usamos BRISK + Fuerza Bruta)
+*/
+
+void mosaicoDeDos (Mat im1, Mat im2, int umbral) {
+	int cols_mosaico = 2*(im1.cols + im2.cols);
+	int filas_mosaico = 2*(im1.rows + im2.rows);
+	Mat mosaico = Mat(filas_mosaico, cols_mosaico, im1.type());
+	
+	//Colocamos la primera imagen en la esquina superior izquierda por medio de la identidad:
+	Mat id = Mat(3,3,CV_32F,0.0);
+	
+	for (int i = 0; i < 3; i++)
+		id.at<float>(i,i) = 1.0;
+		
+	warpPerspective(im1, mosaico, id, Size(mosaico.cols, mosaico.rows));
+	
+	imshow("Mosaico", mosaico);
+
 
 }
 
@@ -323,9 +382,18 @@ PARTE 3: DESCRIPTORES Y MATCHES
 ===============================
 */
 
-	obtenerMatchesFuerzaBruta (yose1, yose2, 65);
+	//obtenerMatchesFuerzaBruta (yose1, yose2, 65);
+	//obtenerMatchesFlann (yose1, yose2, 65);
 
 
+/*
+=================================
+PARTE 4: MOSAICO CON DOS IMAGENES
+=================================
+*/
+
+	mosaicoDeDos(yose1, yose2, 65);
+	
 	waitKey(0);
 	destroyAllWindows();
 
