@@ -131,8 +131,8 @@ Funcion que obtiene los KeyPoints de una imagen con el detector BRISK.
 @escalaDePatron: parametro de escala del patron (patternScale) para el detector BRISK a usar.
 */
 
-vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30, int octavas = 3, float escalaDePatron = 1.0f) {
-	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral, octavas, escalaDePatron);
+vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30) {
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
 	vector<KeyPoint> puntosDetectados;
 
 	ptrDetectorBRISK->detect(im, puntosDetectados);
@@ -145,9 +145,12 @@ vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30, int octavas = 3
 /*
 Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
 @im: imagen a la que le calculamos los KeyPoints
+@num_caracteristicas: numero maximo de caracteristicas a detectar
+@tipo_marcador: criterio para elegir o no un punto HARRIS o FAST
+@umbral_FAST: umbral para elegir los puntos segun la medidad elegida
 */
-vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, float factor_escala = 1.2f, int num_niveles = 8, int umbral_borde = 31, int WTA_K = 2, int tamano_area = 31, int umbral_rapido = 20, int tipo_marcador = ORB::HARRIS_SCORE){
-	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, factor_escala, num_niveles, umbral_borde, 0, WTA_K, tipo_marcador, tamano_area, umbral_rapido);
+vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20){
+	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
 	vector<KeyPoint> puntosDetectados;
 
 	ptrDetectorORB->detect(im, puntosDetectados);
@@ -249,19 +252,25 @@ PARTE 2: EXTRAER KEYPOINTS
 	vector<KeyPoint> puntosDetectados; //donde almacenaremos los puntos detectados para cada imagen por cada criterio, reutilizable.
 	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPORB; //las imagenes correspondientes pintando los puntos detectados.
 
-	puntosDetectados = obtenerKeyPointsBRISK(yose1, 10);
+	/*puntosDetectados = obtenerKeyPointsBRISK(yose1, 65);
 	drawKeypoints(yose1, puntosDetectados, yose1KPBRISK);
 	imshow("Yose 1 KP BRISK", yose1KPBRISK);
-	/*puntosDetectados = obtenerKeyPointsORB(yose1);
-	drawKeypoints(yose1, puntosDetectados, yose1KPORB);
-	imshow("Yose 1 KP ORB", yose1KPORB);*/
-	/*puntosDetectados = obtenerKeyPointsBRISK(yose2);
+	puntosDetectados = obtenerKeyPointsBRISK(yose2, 65);
 	drawKeypoints(yose2, puntosDetectados, yose2KPBRISK);
-	puntosDetectados = obtenerKeyPointsORB(yose2);
-	drawKeypoints(yose2, puntosDetectados, yose2KPORB);*/
+	imshow("Yose 2 KP BRISK", yose2KPBRISK);*/
+	puntosDetectados = obtenerKeyPointsORB(yose1, 1000, ORB::HARRIS_SCORE, 35);
+	drawKeypoints(yose1, puntosDetectados, yose1KPORB);
+	imshow("Yose 1 KP ORB", yose1KPORB);	
+	puntosDetectados = obtenerKeyPointsORB(yose2, 1000, ORB::HARRIS_SCORE, 35);
+	drawKeypoints(yose2, puntosDetectados, yose2KPORB);
+	imshow("Yose 2 KP ORB", yose2KPORB);
 
 
-
+/*
+===============================
+PARTE 3: DESCRIPTORES Y MATCHES
+===============================
+*/
 
 
 	waitKey(0);
