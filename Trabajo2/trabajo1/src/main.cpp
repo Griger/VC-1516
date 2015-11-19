@@ -143,6 +143,56 @@ vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30) {
 }
 
 /*
+Funcion que obtiene los descriptores de los KeyPoints localizados mediante un detector BRISK
+@im: imagen a la que le buscamos los descriptores
+@umbral: parametro de umbral para el detector BRISK a usar
+*/
+Mat obtenerDescriptoresBRISK (Mat im, int umbral = 30) {
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
+	vector<KeyPoint> puntosDetectados;
+	Mat descriptores;
+	
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+	
+	ptrDetectorBRISK->compute(im, puntosDetectados, descriptores);
+	
+	return descriptores;
+}
+
+/*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada
+@im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
+@umbral: el umbral para el detector BRISK.
+*/
+vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
+	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
+	Mat descriptores1, descriptores2, imagenMatches;
+	vector<DMatch> matches;
+	
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	BFMatcher matcher = BFMatcher(NORM_L2, true);
+	
+	puntosDetectados1 = obtenerKeyPointsBRISK(im1, umbral);
+	puntosDetectados2 = obtenerKeyPointsBRISK(im2, umbral);
+	
+	
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
+	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
+	
+	matcher.match(descriptores1, descriptores2, matches);
+	
+	drawMatches( im1, puntosDetectados1, im2, puntosDetectados2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1),                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	imshow("Matches Fuerza Bruta", imagenMatches);
+	
+	
+	
+	return matches;
+}
+
+
+/*
 Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
 @im: imagen a la que le calculamos los KeyPoints
 @num_caracteristicas: numero maximo de caracteristicas a detectar
@@ -160,6 +210,7 @@ vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int
 	return puntosDetectados;
 
 }
+
 
 
 
@@ -257,13 +308,13 @@ PARTE 2: EXTRAER KEYPOINTS
 	imshow("Yose 1 KP BRISK", yose1KPBRISK);
 	puntosDetectados = obtenerKeyPointsBRISK(yose2, 65);
 	drawKeypoints(yose2, puntosDetectados, yose2KPBRISK);
-	imshow("Yose 2 KP BRISK", yose2KPBRISK);*/
+	imshow("Yose 2 KP BRISK", yose2KPBRISK);
 	puntosDetectados = obtenerKeyPointsORB(yose1, 1000, ORB::HARRIS_SCORE, 35);
 	drawKeypoints(yose1, puntosDetectados, yose1KPORB);
 	imshow("Yose 1 KP ORB", yose1KPORB);	
 	puntosDetectados = obtenerKeyPointsORB(yose2, 1000, ORB::HARRIS_SCORE, 35);
 	drawKeypoints(yose2, puntosDetectados, yose2KPORB);
-	imshow("Yose 2 KP ORB", yose2KPORB);
+	imshow("Yose 2 KP ORB", yose2KPORB);*/
 
 
 /*
@@ -271,6 +322,8 @@ PARTE 2: EXTRAER KEYPOINTS
 PARTE 3: DESCRIPTORES Y MATCHES
 ===============================
 */
+
+	obtenerMatchesFuerzaBruta (yose1, yose2, 65);
 
 
 	waitKey(0);
