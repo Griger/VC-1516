@@ -100,6 +100,23 @@ vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30) {
 }
 
 /*
+Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
+@im: imagen a la que le calculamos los KeyPoints
+@num_caracteristicas: numero maximo de caracteristicas a detectar
+@tipo_marcador: criterio para elegir o no un punto HARRIS o FAST
+@umbral_FAST: umbral para elegir los puntos segun la medidad elegida
+*/
+vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20){
+	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
+	vector<KeyPoint> puntosDetectados;
+
+	ptrDetectorORB->detect(im, puntosDetectados);
+
+	return puntosDetectados;
+}
+
+
+/*
 Funcion que obtiene los descriptores de los KeyPoints localizados mediante un detector BRISK
 @im: imagen a la que le buscamos los descriptores
 @umbral: parametro de umbral para el detector BRISK a usar
@@ -123,12 +140,13 @@ Funcion que calcula los puntos en correspondencias entre dos imagen por el crite
 */
 vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
 	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
-	Mat descriptores1, descriptores2, imagenMatches;
+	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
 	
 	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
 	BFMatcher matcher = BFMatcher(NORM_L2, true);
 	
+	//Obtenemos los Key Points con BRISK:
 	puntosDetectados1 = obtenerKeyPointsBRISK(im1, umbral);
 	puntosDetectados2 = obtenerKeyPointsBRISK(im2, umbral);
 	
@@ -137,11 +155,8 @@ vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
 	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
 	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
 	
-	matcher.match(descriptores1, descriptores2, matches);
-	
-	drawMatches( im1, puntosDetectados1, im2, puntosDetectados2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1),                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-	
-	imshow("Matches Fuerza Bruta", imagenMatches);	
+	//Calculamos los matches entre ambas imagenes:
+	matcher.match(descriptores1, descriptores2, matches);		
 	
 	return matches;
 }
@@ -153,7 +168,7 @@ Funcion que calcula los puntos en correspondencias entre dos imagen por el crite
 */
 vector<DMatch> obtenerMatchesFlann (Mat im1, Mat im2, int umbral){
 	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
-	Mat descriptores1, descriptores2, imagenMatches;
+	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
 	
 	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
@@ -172,34 +187,9 @@ vector<DMatch> obtenerMatchesFlann (Mat im1, Mat im2, int umbral){
 	descriptores2.convertTo(descriptores2, CV_32F);
 	
 	
-	matcher.match(descriptores1, descriptores2, matches);
-	
-	drawMatches( im1, puntosDetectados1, im2, puntosDetectados2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1),                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-	
-	imshow("Matches Flann", imagenMatches);
-	
-	
+	matcher.match(descriptores1, descriptores2, matches);	
 	
 	return matches;
-}
-
-
-
-
-/*
-Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
-@im: imagen a la que le calculamos los KeyPoints
-@num_caracteristicas: numero maximo de caracteristicas a detectar
-@tipo_marcador: criterio para elegir o no un punto HARRIS o FAST
-@umbral_FAST: umbral para elegir los puntos segun la medidad elegida
-*/
-vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20){
-	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
-	vector<KeyPoint> puntosDetectados;
-
-	ptrDetectorORB->detect(im, puntosDetectados);
-
-	return puntosDetectados;
 }
 
 /*
@@ -303,6 +293,7 @@ void mosaicoDeN (vector<Mat> imagenes) {
 }
 
 void parte1() {
+	cout << "Inicio Parte 1: " << endl;
 
 	Mat tablero1 = imread("imagenes/Tablero1.jpg");
 	Mat tablero2 = imread("imagenes/Tablero2.jpg");
@@ -378,12 +369,9 @@ void parte1() {
 
 }
 
-void parte2() {
-
-	//Cargamos las imagenes para los apartados 2 y 3:
-	Mat yose1 = imread("imagenes/Yosemite1.jpg");
-	Mat yose2 = imread("imagenes/Yosemite2.jpg");
-
+void parte2(Mat yose1, Mat yose2) {
+	cout << "Inicio Parte 2: " << endl;
+	
 	vector<KeyPoint> puntosDetectados; //donde almacenaremos los puntos detectados para cada imagen por cada criterio, reutilizable.
 	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPORB; //las imagenes correspondientes pintando los puntos detectados.
 
@@ -407,9 +395,38 @@ void parte2() {
 	
 	waitKey(0);
 	destroyAllWindows();
-
 }
 
+void parte3(Mat yose1, Mat yose2) {
+	cout << "Inicio Parte 3: " << endl;
+	
+	vector<KeyPoint> puntosDetectadosYose1, puntosDetectadosYose2;
+	vector<DMatch> matchesFB, matchesFLANN;
+	Mat imagenMatchesFB, imagenMatchesFLANN;
+	
+	puntosDetectadosYose1 = obtenerKeyPointsBRISK(yose1, 65);
+	puntosDetectadosYose2 = obtenerKeyPointsBRISK(yose2, 65);
+
+	matchesFB = obtenerMatchesFuerzaBruta (yose1, yose2, 65);
+	
+	cout << "Se han obtenido " << matchesFB.size() << " matches con Fuerza Bruta + Cross check + BRISK" << endl;
+	
+	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFB, imagenMatchesFB, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	imshow("Matches Fuerza Bruta", imagenMatchesFB);
+	
+	matchesFLANN = obtenerMatchesFlann (yose1, yose2, 65);
+	
+	cout << "Se han obtenido " << matchesFLANN.size() << " matches con FLANN + BRISK" << endl;
+	
+	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFLANN, imagenMatchesFLANN, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	
+	imshow("Matches Flann", imagenMatchesFLANN);
+	
+	waitKey(0);
+	destroyAllWindows();
+}
 
 
 
@@ -431,7 +448,12 @@ PARTE 2: EXTRAER KEYPOINTS
 ==========================
 */
 
-	//parte2();
+	//Cargamos las imagenes para los apartados 2 ,3 y 4:
+	Mat yose1 = imread("imagenes/Yosemite1.jpg");
+	Mat yose2 = imread("imagenes/Yosemite2.jpg");
+
+
+	//parte2(yose1, yose2);
 	
 
 /*
@@ -440,9 +462,7 @@ PARTE 3: DESCRIPTORES Y MATCHES
 ===============================
 */
 
-	//obtenerMatchesFuerzaBruta (yose1, yose2, 65);
-	//obtenerMatchesFlann (yose1, yose2, 65);
-
+	parte3(yose1, yose2);
 
 /*
 =================================
