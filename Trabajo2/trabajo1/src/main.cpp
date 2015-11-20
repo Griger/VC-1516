@@ -230,8 +230,8 @@ Funcion que obtiene un mosaico de proyeccion plana de dos imagenes
 @origen y destino: imagenes con las que formar el mosaico.
 */
 
-void mosaicoDeDos (Mat origen, Mat destino) {
-	Mat mosaico = Mat(1000, 1000, origen.type());
+Mat mosaicoDeDos (Mat origen, Mat destino) {
+	Mat mosaico = Mat(550, 1000, origen.type());
 		
 	//Colocamos la primera imagen en la esquina superior izquierda por medio de la identidad:
 	Mat id = Mat(3,3,CV_32F,0.0);
@@ -245,7 +245,7 @@ void mosaicoDeDos (Mat origen, Mat destino) {
 	
 	warpPerspective(origen, mosaico, homografia, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
 	
-	imshow("Mosaico de 2", mosaico);
+	return mosaico;	
 }
 
 /*
@@ -253,8 +253,8 @@ Funcion que obtiene un mosaico de proyeccion plana con varias imagen
 @imagenes: imagenes para construir el mosaico
 */
 
-void mosaicoDeN (vector<Mat> imagenes) {
-	Mat mosaico = Mat(1000, 2000, imagenes.at(0).type());
+Mat mosaicoDeN (vector<Mat> imagenes) {
+	Mat mosaico = Mat(700, 1100, imagenes.at(0).type());
 	int posicion_central = imagenes.size()/2;
 	
 	//Colocamos la imagen central del vector en el centro del mosaico
@@ -267,7 +267,6 @@ void mosaicoDeN (vector<Mat> imagenes) {
 	colocacionCentral.at<float>(0,2) = mosaico.cols/2 - imagenes.at(posicion_central).cols/2;
 	colocacionCentral.at<float>(1,2) = mosaico.rows/2 - imagenes.at(posicion_central).rows/2;
 	
-	mostrarMatriz(colocacionCentral);
 	warpPerspective(imagenes.at(posicion_central), mosaico, colocacionCentral, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
 	
 	//Matrices donde se acumularan las homografias a cada uno de los lados de la imagen central:
@@ -288,7 +287,7 @@ void mosaicoDeN (vector<Mat> imagenes) {
 	}
 	
 	
-	imshow("Mosaico de N", mosaico);
+	return mosaico;
 
 }
 
@@ -428,6 +427,43 @@ void parte3(Mat yose1, Mat yose2) {
 	destroyAllWindows();
 }
 
+void parte4(Mat yose1, Mat yose2) {
+	cout << "Inicio Parte 4: " << endl;
+	
+	Mat mosaico = mosaicoDeDos(yose2, yose1);
+
+	imshow("Mosaico de 2", mosaico);
+	
+	waitKey(0);
+	destroyAllWindows();
+
+}
+
+void parte5() {
+	cout << "Inicio Parte 5: " << endl;
+
+	vector<Mat> imagenes;
+	
+	imagenes.push_back(imread("imagenes/mosaico002.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico004.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico006.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico005.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico007.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico008.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico009.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico011.jpg"));
+	
+	Mat mosaico = mosaicoDeN(imagenes);
+	
+	imshow("Mosaico de varias imagenes", mosaico);
+	
+	waitKey(0);
+	destroyAllWindows();
+
+}
+
 
 
 int main(int argc, char* argv[]) {
@@ -462,7 +498,7 @@ PARTE 3: DESCRIPTORES Y MATCHES
 ===============================
 */
 
-	parte3(yose1, yose2);
+	//parte3(yose1, yose2);
 
 /*
 =================================
@@ -470,27 +506,14 @@ PARTE 4: MOSAICO CON DOS IMAGENES
 =================================
 */
 
-	//mosaicoDeDos(yose2, yose1);
-	
+	//parte4(yose1, yose2);
 /*
 ====================================
 PARTE 5: MOSAICO CON VARIAS IMAGENES
 ====================================
 */
-	/*vector<Mat> imagenes;
 	
-	imagenes.push_back(imread("imagenes/mosaico002.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico004.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico006.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico005.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico007.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico008.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico009.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico011.jpg"));
-	
-	mosaicoDeN(imagenes);*/
+	parte5();
 	
 	waitKey(0);
 	destroyAllWindows();
