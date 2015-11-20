@@ -134,11 +134,31 @@ Mat obtenerDescriptoresBRISK (Mat im, int umbral = 30) {
 }
 
 /*
-Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada
+Funcion que obtiene los descriptores de los KeyPoints localizados mediante un detector ORB
+@im: imagen a la que le buscamos los descriptores
+@num_caracteristicas: numero maximo de caracteristicas a detectar
+@tipo_marcador: criterio para elegir o no un punto HARRIS o FAST
+@umbral_FAST: umbral para elegir los puntos segun la medidad elegida
+*/
+Mat obtenerDescriptoresORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20) {
+	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
+	vector<KeyPoint> puntosDetectados;
+	Mat descriptores;
+	
+	ptrDetectorORB->detect(im, puntosDetectados);
+	
+	ptrDetectorORB->compute(im, puntosDetectados, descriptores);
+	
+	return descriptores;
+}
+
+
+/*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada + BRISK
 @im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
 @umbral: el umbral para el detector BRISK.
 */
-vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
+vector<DMatch> obtenerMatchesFuerzaBrutaBRISK (Mat im1, Mat im2, int umbral){
 	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
 	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
@@ -162,11 +182,40 @@ vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
 }
 
 /*
-Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio Flann
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada + ORB
+
+@im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
+*/
+vector<DMatch> obtenerMatchesFuerzaBrutaORB (Mat im1, Mat im2){
+	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
+	Mat descriptores1, descriptores2;
+	vector<DMatch> matches;
+	
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	BFMatcher matcher = BFMatcher(NORM_L2, true);
+	
+	//Obtenemos los Key Points con BRISK:
+	puntosDetectados1 = obtenerKeyPointsORB(im1, 1000, ORB::HARRIS_SCORE, 35);
+	puntosDetectados2 = obtenerKeyPointsORB(im2, 1000, ORB::HARRIS_SCORE, 35);
+	
+	
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresORB(im1, 1000, ORB::HARRIS_SCORE, 35);
+	descriptores2 = obtenerDescriptoresORB(im2, 1000, ORB::HARRIS_SCORE, 35);
+	
+	//Calculamos los matches entre ambas imagenes:
+	matcher.match(descriptores1, descriptores2, matches);		
+	
+	return matches;
+}
+
+
+/*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio Flann + BRISK
 @im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
 @umbral: el umbral para el detector BRISK.
 */
-vector<DMatch> obtenerMatchesFlann (Mat im1, Mat im2, int umbral){
+vector<DMatch> obtenerMatchesFlannBRISK (Mat im1, Mat im2, int umbral){
 	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
 	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
@@ -193,6 +242,36 @@ vector<DMatch> obtenerMatchesFlann (Mat im1, Mat im2, int umbral){
 }
 
 /*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio Flann + ORB
+@im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
+*/
+vector<DMatch> obtenerMatchesFlannORB (Mat im1, Mat im2){
+	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
+	Mat descriptores1, descriptores2;
+	vector<DMatch> matches;
+	
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	FlannBasedMatcher matcher;
+	
+	puntosDetectados1 = obtenerKeyPointsORB(im1, 1000, ORB::HARRIS_SCORE, 35);
+	puntosDetectados2 = obtenerKeyPointsORB(im2, 1000, ORB::HARRIS_SCORE, 35);
+	
+	
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresORB(im1, 1000, ORB::HARRIS_SCORE, 35);
+	descriptores2 = obtenerDescriptoresORB(im2, 1000, ORB::HARRIS_SCORE, 35);
+	
+	//Convertimos las matrices de descriptores a CV_32F para el correcto funcionamiento del matcher creado:
+	descriptores1.convertTo(descriptores1, CV_32F);
+	descriptores2.convertTo(descriptores2, CV_32F);
+	
+	
+	matcher.match(descriptores1, descriptores2, matches);	
+	
+	return matches;
+}
+
+/*
 Funcion que calcula la homografia que lleva la imagen origen a la imagen destino por medio de findHomography
 @origen: imagen de origen
 @destino: imagen de destino
@@ -207,7 +286,7 @@ Mat calcularHomografia (Mat origen, Mat destino) {
 	puntosDetectadosDestino = obtenerKeyPointsBRISK(destino, 65);
 	
 	//Obtenemos los matches por fuerza bruta:
-	matches = obtenerMatchesFuerzaBruta(origen, destino, 65);
+	matches = obtenerMatchesFuerzaBrutaBRISK(origen, destino, 65);
 	
 	//Obtenemos los puntos en correspondencias entre ambas imagenes:
 	for (int i = 0; i < matches.size(); i++){
@@ -249,7 +328,7 @@ Mat mosaicoDeDos (Mat origen, Mat destino) {
 }
 
 /*
-Funcion que obtiene un mosaico de proyeccion plana con varias imagen
+Funcion que obtiene un mosaico de proyeccion plana con varias imagenes comenzando por la central en la realidad
 @imagenes: imagenes para construir el mosaico
 */
 
@@ -288,6 +367,39 @@ Mat mosaicoDeN (vector<Mat> imagenes) {
 	
 	
 	return mosaico;
+
+}
+
+/*
+Funcion que obtiene un mosaico de proyeccion plana con varias imagenes comenzando por la primera de la secuencia
+@imagenes: imagenes para construir el mosaico
+*/
+Mat mosaicoDeNMalo (vector<Mat> imagenes) {
+
+	Mat mosaico = Mat(700, 1100, imagenes.at(0).type());
+	
+	//Colocamos la imagen central del vector en el centro del mosaico
+	Mat colocacionInicial = Mat(3,3,CV_32F,0.0);
+	
+	for (int i = 0; i < 3; i++)
+		colocacionInicial.at<float>(i,i) = 1.0;
+		
+	//Realizamos una traslacion simplemente:
+	colocacionInicial.at<float>(1,2) = 100;
+	
+	warpPerspective(imagenes.at(0), mosaico, colocacionInicial, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
+	
+	//Matriz donde se acumularan las homografias segun vamos colocando imagenes en el mosaico:
+	Mat H;
+	colocacionInicial.copyTo(H);
+	
+	for (int i = 1; i < imagenes.size(); i++) {
+		H = H * calcularHomografia(imagenes.at(i), imagenes.at(i-1));
+		warpPerspective(imagenes.at(i), mosaico, H, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);	
+	}	
+	
+	return mosaico;
+
 
 }
 
@@ -406,7 +518,7 @@ void parte3(Mat yose1, Mat yose2) {
 	puntosDetectadosYose1 = obtenerKeyPointsBRISK(yose1, 65);
 	puntosDetectadosYose2 = obtenerKeyPointsBRISK(yose2, 65);
 
-	matchesFB = obtenerMatchesFuerzaBruta (yose1, yose2, 65);
+	matchesFB = obtenerMatchesFuerzaBrutaBRISK(yose1, yose2, 65);
 	
 	cout << "Se han obtenido " << matchesFB.size() << " matches con Fuerza Bruta + Cross check + BRISK" << endl;
 	
@@ -414,7 +526,7 @@ void parte3(Mat yose1, Mat yose2) {
 	
 	imshow("Matches Fuerza Bruta", imagenMatchesFB);
 	
-	matchesFLANN = obtenerMatchesFlann (yose1, yose2, 65);
+	matchesFLANN = obtenerMatchesFlannBRISK(yose1, yose2, 65);
 	
 	cout << "Se han obtenido " << matchesFLANN.size() << " matches con FLANN + BRISK" << endl;
 	
@@ -444,6 +556,7 @@ void parte5() {
 
 	vector<Mat> imagenes;
 	
+	//Secuencia buena:
 	imagenes.push_back(imread("imagenes/mosaico002.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico004.jpg"));
@@ -455,7 +568,22 @@ void parte5() {
 	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico011.jpg"));
 	
+	//Secuencia mala pero en el orden original:
+	/*imagenes.push_back(imread("imagenes/mosaico002.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico004.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico005.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico006.jpg"));
+	
+	imagenes.push_back(imread("imagenes/mosaico007.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico008.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico009.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico011.jpg"));*/
+	
 	Mat mosaico = mosaicoDeN(imagenes);
+	
+	//Mat mosaico_malo = mosaicoDeNMalo(imagenes);
 	
 	imshow("Mosaico de varias imagenes", mosaico);
 	
