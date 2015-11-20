@@ -232,7 +232,11 @@ Mat calcularHomografia (Mat origen, Mat destino) {
 	
 	//Calculamos la homografia con los puntos en correspondencias:
 	
-	return findHomography(puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino, CV_RANSAC);
+	Mat H = findHomography(puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino, CV_RANSAC);
+	
+	H.convertTo(H, CV_32F);
+	
+	return H;
 }
 
 
@@ -265,27 +269,41 @@ Funcion que obtiene un mosaico de proyeccion plana con varias imagen
 */
 
 void mosaicoDeN (vector<Mat> imagenes) {
-	Mat mosaico = Mat(1000, 1000, imagenes.at(0).type());
-	int posicion_central = imagenes.size()/2 + 1;
+	Mat mosaico = Mat(1000, 2000, imagenes.at(0).type());
+	int posicion_central = imagenes.size()/2;
 	
 	//Colocamos la imagen central del vector en el centro del mosaico
-	Mat colocacionCentral = Mat(3,3,CV_32F,0,0);
+	Mat colocacionCentral = Mat(3,3,CV_32F,0.0);
 	
 	for (int i = 0; i < 3; i++)
 		colocacionCentral.at<float>(i,i) = 1.0;
 		
 	//Realizamos una traslacion simplemente:
-	colocacionCentral.at<float>(0,2) = mosaico.cols/2 - imagenes.at(posicion_central).cols;
-	colocacionCentral.at<float>(1,2) = mosaico.rows/2 - imagenes.at(posicion_central).rows;
+	colocacionCentral.at<float>(0,2) = mosaico.cols/2 - imagenes.at(posicion_central).cols/2;
+	colocacionCentral.at<float>(1,2) = mosaico.rows/2 - imagenes.at(posicion_central).rows/2;
 	
+	mostrarMatriz(colocacionCentral);
 	warpPerspective(imagenes.at(posicion_central), mosaico, colocacionCentral, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
 	
+	//Matrices donde se acumularan las homografias a cada uno de los lados de la imagen central:
+	Mat Hizda, Hdcha;
+	colocacionCentral.copyTo(Hizda);
+	colocacionCentral.copyTo(Hdcha);
+	
+	for (int i = 1; i <= posicion_central; i++) {
+		if (posicion_central-i >= 0){
+			Hizda = Hizda * calcularHomografia(imagenes.at(posicion_central-i), imagenes.at(posicion_central-i+1));
+			warpPerspective(imagenes.at(posicion_central-i), mosaico, Hizda, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
+			
+		}
+		if (posicion_central+i < imagenes.size()){
+			Hdcha = Hdcha * calcularHomografia(imagenes.at(posicion_central+i), imagenes.at(posicion_central+i-1));
+			warpPerspective(imagenes.at(posicion_central+i), mosaico, Hdcha, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
+		}
+	}
 	
 	
 	imshow("Mosaico de N", mosaico);
-
-
-
 
 }
 
@@ -423,20 +441,16 @@ PARTE 5: MOSAICO CON VARIAS IMAGENES
 	imagenes.push_back(imread("imagenes/mosaico002.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico004.jpg"));
-	imagenes.push_back(imread("imagenes/mosaico005.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico006.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico005.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico007.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico008.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico009.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico011.jpg"));
 	
-	for (int i = 0; i < imagenes.size(); i++){
-		string nombreBase = "Mosaico ";
-		string numero = to_string(i);
-		imshow(nombreBase + numero, imagenes.at(i));
-	}
-		
+	mosaicoDeN(imagenes);
+	
 	waitKey(0);
 	destroyAllWindows();
 
