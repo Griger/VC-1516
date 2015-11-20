@@ -1,5 +1,6 @@
 #include<opencv2/opencv.hpp>
 #include<vector>
+#include<string>
 
 #include "imagenes.hpp"
 #include "convolucion.hpp"
@@ -17,48 +18,6 @@ void mostrarMatriz(Mat &m) {
 	}
 
 	cout << endl;
-}
-
-//BONUS 1:
-
-//Declaramos las funciones que intervienen en las mascaras y de las que por tanto muestrearemos.
-
-float parte1PrimeraDerivada (float x, float sigma) {
-	return 1/(2*M_PI*sigma*sigma)*(-x/(sigma*sigma))*exp(-(x*x)/(2*sigma*sigma));
-}
-
-float parte2PrimeraDerivada(float x, float sigma) {
-	return exp(-(x*x) / (2 * sigma*sigma));
-}
-
-float parte1SegundaDerivada(float x, float sigma) {
-	return (1 / (2 * M_PI*sigma*sigma)) * (((-1 / (sigma*sigma))*exp(-(x*x) / (2 * sigma*sigma))) + ((-x / (sigma*sigma)) * (-x / (sigma*sigma)) * exp(-(x*x) / (2 * sigma*sigma))));
-}
-
-float parte2SegundaDerivada(float x, float sigma) {
-	return exp(-(x*x) / (2 * sigma*sigma));
-}
-
-/*
-Funcion que calcula las dos mascaras en las que se puede descomponer la mascara 2D de la primera parcial (con respecto a x o y) de una Gaussiana.
-@sigma: el parametro sigma del que dependen las funciones de la mascara.
-@parte1: matriz donde se almacenara la primera parte de la mascara (la relacionada con la funcion parte1PrimeraDerivada).
-@parte2: matriz donde se almacenara la segunda parte de la mascara (la relacionada con la funcion parte2PrimeraDerivada).
-*/
-void calcularMascarasPrimeraDerivada(float sigma, Mat &parte1, Mat &parte2) {
-	parte1 = calcularVectorMascara(sigma, parte1PrimeraDerivada);
-	parte2 = calcularVectorMascara(sigma, parte2PrimeraDerivada);
-}
-
-/*
-Funcion que calcula las dos mascaras en las que se puede descomponer la mascara 2D de la segunda parcial (con respecto a x o y, dos veces) de una Gaussiana.
-@sigma: el parametro sigma del que dependen las funciones de la mascara.
-@parte1: matriz donde se almacenara la primera parte de la mascara (la relacionada con la funcion parte1SegundaDerivada).
-@parte2: matriz donde se almacenara la segunda parte de la mascara (la relacionada con la funcion parte2SegundaDerivada).
-*/
-void calcularMascarasSegundaDerivada(float sigma, Mat &parte1, Mat &parte2) {
-	parte1 = calcularVectorMascara(sigma, parte1SegundaDerivada);
-	parte2 = calcularVectorMascara(sigma, parte2SegundaDerivada);
 }
 
 class Punto{
@@ -184,9 +143,7 @@ vector<DMatch> obtenerMatchesFuerzaBruta (Mat im1, Mat im2, int umbral){
 	
 	drawMatches( im1, puntosDetectados1, im2, puntosDetectados2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1),                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 	
-	imshow("Matches Fuerza Bruta", imagenMatches);
-	
-	
+	imshow("Matches Fuerza Bruta", imagenMatches);	
 	
 	return matches;
 }
@@ -211,6 +168,11 @@ vector<DMatch> obtenerMatchesFlann (Mat im1, Mat im2, int umbral){
 	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
 	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
 	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
+	
+	//Convertimos las matrices de descriptores a CV_32F para el correcto funcionamiento del matcher creado:
+	descriptores1.convertTo(descriptores1, CV_32F);
+	descriptores2.convertTo(descriptores2, CV_32F);
+	
 	
 	matcher.match(descriptores1, descriptores2, matches);
 	
@@ -245,45 +207,84 @@ vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int
 
 }
 
+/*
+Funcion que calcula la homografia que lleva la imagen origen a la imagen destino por medio de findHomography
+@origen: imagen de origen
+@destino: imagen de destino
+*/
+Mat calcularHomografia (Mat origen, Mat destino) {
+	vector<KeyPoint> puntosDetectadosOrigen, puntosDetectadosDestino;
+	vector<DMatch> matches;
+	vector<Point2f> puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino;
+	
+	//Obtenemos los puntos clave con BRISK en cada imagen
+	puntosDetectadosOrigen = obtenerKeyPointsBRISK(origen, 65);
+	puntosDetectadosDestino = obtenerKeyPointsBRISK(destino, 65);
+	
+	//Obtenemos los matches por fuerza bruta:
+	matches = obtenerMatchesFuerzaBruta(origen, destino, 65);
+	
+	//Obtenemos los puntos en correspondencias entre ambas imagenes:
+	for (int i = 0; i < matches.size(); i++){
+		puntosEnCorrespondenciasOrigen.push_back(puntosDetectadosOrigen[matches[i].queryIdx].pt);
+		puntosEnCorrespondenciasDestino.push_back(puntosDetectadosDestino[matches[i].trainIdx].pt);	
+	}
+	
+	//Calculamos la homografia con los puntos en correspondencias:
+	
+	return findHomography(puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino, CV_RANSAC);
+}
+
 
 /*
 Funcion que obtiene un mosaico de proyeccion plana de dos imagenes
-@im1 e im2: imagenes con las que formar el mosaico.
-@umbral: el umbral para el destector BRISK (usamos BRISK + Fuerza Bruta)
+@origen y destino: imagenes con las que formar el mosaico.
 */
 
-void mosaicoDeDos (Mat im1, Mat im2, int umbral) {
-	int cols_mosaico = 2*im1.cols;
-	int filas_mosaico = 2*im1.rows;
-	Mat mosaico = Mat(filas_mosaico, cols_mosaico, im1.type());
-	vector<DMatch> matches;
-	vector<KeyPoint> puntosDetectadosOrigen, puntosDetectadosDestino;
-	vector<Point2f> puntosCorrespondenciasOrigen, puntosCorrespondenciasDestino;
-	
-	//Obtenemos los puntos clave con BRISK en cada imagen:
-	puntosDetectadosOrigen = obtenerKeyPointsBRISK(im2, umbral);
-	puntosDetectadosDestino = obtenerKeyPointsBRISK(im1, umbral);
-	
+void mosaicoDeDos (Mat origen, Mat destino) {
+	Mat mosaico = Mat(1000, 1000, origen.type());
+		
 	//Colocamos la primera imagen en la esquina superior izquierda por medio de la identidad:
 	Mat id = Mat(3,3,CV_32F,0.0);
 	
 	for (int i = 0; i < 3; i++)
 		id.at<float>(i,i) = 1.0;
 		
-	warpPerspective(im1, mosaico, id, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
+	warpPerspective(destino, mosaico, id, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
 	
-	matches = obtenerMatchesFuerzaBruta (im2, im1, 65);
+	Mat homografia = calcularHomografia(origen, destino);
 	
-	for (int i = 0; i < matches.size(); i++){
-		puntosCorrespondenciasOrigen.push_back(puntosDetectadosOrigen[matches[i].queryIdx].pt);
-		puntosCorrespondenciasDestino.push_back(puntosDetectadosDestino[matches[i].trainIdx].pt);	
-	}
+	warpPerspective(origen, mosaico, homografia, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
 	
-	Mat homografia = findHomography(puntosCorrespondenciasOrigen, puntosCorrespondenciasDestino, CV_RANSAC);
+	imshow("Mosaico de 2", mosaico);
+}
+
+/*
+Funcion que obtiene un mosaico de proyeccion plana con varias imagen
+@imagenes: imagenes para construir el mosaico
+*/
+
+void mosaicoDeN (vector<Mat> imagenes) {
+	Mat mosaico = Mat(1000, 1000, imagenes.at(0).type());
+	int posicion_central = imagenes.size()/2 + 1;
 	
-	warpPerspective(im2, mosaico, homografia, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
+	//Colocamos la imagen central del vector en el centro del mosaico
+	Mat colocacionCentral = Mat(3,3,CV_32F,0,0);
 	
-	imshow("Mosaico", mosaico);
+	for (int i = 0; i < 3; i++)
+		colocacionCentral.at<float>(i,i) = 1.0;
+		
+	//Realizamos una traslacion simplemente:
+	colocacionCentral.at<float>(0,2) = mosaico.cols/2 - imagenes.at(posicion_central).cols;
+	colocacionCentral.at<float>(1,2) = mosaico.rows/2 - imagenes.at(posicion_central).rows;
+	
+	warpPerspective(imagenes.at(posicion_central), mosaico, colocacionCentral, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
+	
+	
+	
+	imshow("Mosaico de N", mosaico);
+
+
 
 
 }
@@ -410,8 +411,32 @@ PARTE 4: MOSAICO CON DOS IMAGENES
 =================================
 */
 
-	mosaicoDeDos(yose1, yose2, 65);
+	//mosaicoDeDos(yose2, yose1);
 	
+/*
+====================================
+PARTE 5: MOSAICO CON VARIAS IMAGENES
+====================================
+*/
+	vector<Mat> imagenes;
+	
+	imagenes.push_back(imread("imagenes/mosaico002.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico004.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico005.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico006.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico007.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico008.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico009.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
+	imagenes.push_back(imread("imagenes/mosaico011.jpg"));
+	
+	for (int i = 0; i < imagenes.size(); i++){
+		string nombreBase = "Mosaico ";
+		string numero = to_string(i);
+		imshow(nombreBase + numero, imagenes.at(i));
+	}
+		
 	waitKey(0);
 	destroyAllWindows();
 
