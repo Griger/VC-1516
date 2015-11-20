@@ -96,8 +96,6 @@ vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30) {
 
 	ptrDetectorBRISK->detect(im, puntosDetectados);
 
-	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
-
 	return puntosDetectados;
 }
 
@@ -201,10 +199,7 @@ vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int
 
 	ptrDetectorORB->detect(im, puntosDetectados);
 
-	cout << "Hemos obtenido: " << puntosDetectados.size() << " puntos." << endl;
-	
 	return puntosDetectados;
-
 }
 
 /*
@@ -307,19 +302,8 @@ void mosaicoDeN (vector<Mat> imagenes) {
 
 }
 
+void parte1() {
 
-
-
-int main(int argc, char* argv[]) {
-
-	cout << "OpenCV detectada " << endl;
-
-/*
-=====================================
-PARTE 1: ESTIMACION DE LA HOMOGRAFIA
-=====================================
-*/
-	/*
 	Mat tablero1 = imread("imagenes/Tablero1.jpg");
 	Mat tablero2 = imread("imagenes/Tablero2.jpg");
 
@@ -343,6 +327,7 @@ PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 	ptos_tablero2.push_back(Punto(101, 392));
 	ptos_tablero2.push_back(Punto(432, 442));
 	ptos_tablero2.push_back(Punto(248, 164));
+
 	ptos_tablero2.push_back(Punto(391, 195));
 	ptos_tablero2.push_back(Punto(218, 312));
 	ptos_tablero2.push_back(Punto(362, 337));
@@ -350,7 +335,7 @@ PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 	ptos_tablero2.push_back(Punto(305, 377));
 
 	//Aquí hacemos lo mismo sólo que ahora lo hacemos con los puntos para el experimento con puntos no adecuados:
-	ptos_tablero1.push_back(Punto(157, 47));
+	/*ptos_tablero1.push_back(Punto(157, 47));
 	ptos_tablero1.push_back(Punto(177, 47));
 	ptos_tablero1.push_back(Punto(155, 73));
 	ptos_tablero1.push_back(Punto(175, 71));
@@ -370,7 +355,7 @@ PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 	ptos_tablero2.push_back(Punto(191, 51));
 	ptos_tablero2.push_back(Punto(137, 64));
 	ptos_tablero2.push_back(Punto(163, 69));
-	ptos_tablero2.push_back(Punto(131, 90));
+	ptos_tablero2.push_back(Punto(131, 90));*/
 
 	Mat H = obtenerMatrizTransformacion(ptos_tablero1, ptos_tablero2);
 	Mat tablero1_transformada;
@@ -384,13 +369,16 @@ PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 	imagenes.push_back(tablero2);
 
 
-	mostrarImagenes("Calcular homografia (Aparado 1):", imagenes);*/
+	mostrarImagenes("Calcular homografia (Aparado 1):", imagenes);
+	
+	waitKey(0);
+	destroyAllWindows();
 
-/*
-==========================
-PARTE 2: EXTRAER KEYPOINTS
-==========================
-*/
+
+
+}
+
+void parte2() {
 
 	//Cargamos las imagenes para los apartados 2 y 3:
 	Mat yose1 = imread("imagenes/Yosemite1.jpg");
@@ -399,19 +387,52 @@ PARTE 2: EXTRAER KEYPOINTS
 	vector<KeyPoint> puntosDetectados; //donde almacenaremos los puntos detectados para cada imagen por cada criterio, reutilizable.
 	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPORB; //las imagenes correspondientes pintando los puntos detectados.
 
-	/*puntosDetectados = obtenerKeyPointsBRISK(yose1, 65);
+	puntosDetectados = obtenerKeyPointsBRISK(yose1, 65);
+	cout << "En Yosemite1 con BRISK hemos obtenido: " << puntosDetectados.size() << " puntos" << endl;
 	drawKeypoints(yose1, puntosDetectados, yose1KPBRISK);
 	imshow("Yose 1 KP BRISK", yose1KPBRISK);
 	puntosDetectados = obtenerKeyPointsBRISK(yose2, 65);
+	cout << "En Yosemite2 con BRISK hemos obtenido: " << puntosDetectados.size() << " puntos" << endl;
 	drawKeypoints(yose2, puntosDetectados, yose2KPBRISK);
 	imshow("Yose 2 KP BRISK", yose2KPBRISK);
 	puntosDetectados = obtenerKeyPointsORB(yose1, 1000, ORB::HARRIS_SCORE, 35);
+	cout << "En Yosemite1 con ORB hemos obtenido: " << puntosDetectados.size() << " puntos" << endl;
 	drawKeypoints(yose1, puntosDetectados, yose1KPORB);
 	imshow("Yose 1 KP ORB", yose1KPORB);	
 	puntosDetectados = obtenerKeyPointsORB(yose2, 1000, ORB::HARRIS_SCORE, 35);
+	cout << "En Yosemite2 con ORB hemos obtenido: " << puntosDetectados.size() << " puntos" << endl;
 	drawKeypoints(yose2, puntosDetectados, yose2KPORB);
-	imshow("Yose 2 KP ORB", yose2KPORB);*/
+	imshow("Yose 2 KP ORB", yose2KPORB);
 
+	
+	waitKey(0);
+	destroyAllWindows();
+
+}
+
+
+
+
+int main(int argc, char* argv[]) {
+
+	cout << "OpenCV detectada " << endl;
+
+/*
+=====================================
+PARTE 1: ESTIMACION DE LA HOMOGRAFIA
+=====================================
+*/
+
+	//parte1();
+
+/*
+==========================
+PARTE 2: EXTRAER KEYPOINTS
+==========================
+*/
+
+	//parte2();
+	
 
 /*
 ===============================
@@ -436,7 +457,7 @@ PARTE 4: MOSAICO CON DOS IMAGENES
 PARTE 5: MOSAICO CON VARIAS IMAGENES
 ====================================
 */
-	vector<Mat> imagenes;
+	/*vector<Mat> imagenes;
 	
 	imagenes.push_back(imread("imagenes/mosaico002.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico003.jpg"));
@@ -449,7 +470,7 @@ PARTE 5: MOSAICO CON VARIAS IMAGENES
 	imagenes.push_back(imread("imagenes/mosaico010.jpg"));
 	imagenes.push_back(imread("imagenes/mosaico011.jpg"));
 	
-	mosaicoDeN(imagenes);
+	mosaicoDeN(imagenes);*/
 	
 	waitKey(0);
 	destroyAllWindows();
