@@ -1,14 +1,58 @@
-#include<opencv2/opencv.hpp>
-#include<vector>
-#include<string>
-
-#include "imagenes.hpp"
-#include "convolucion.hpp"
+#include <opencv2/opencv.hpp>
+#include <vector>
+#include<time.h>
 
 using namespace std;
 using namespace cv;
 
-# define M_PI           3.14159265358979323846
+/*
+Funcion que muestra una imagen por pantalla.
+@ nombreVentana: el nombre de la ventana que crearemos y en la que mostraremos la imagen.
+@ im: la imagen a mostrar
+@ tipoVentana: el tipo de ventana que queremos crear, por defecto es 1, es decir una ventana que se ajusta al tamanio de la imagen.
+*/
+void mostrarImagen(string nombreVentana, Mat &im, int tipoVentana) {
+	if (!im.empty()) {
+		namedWindow(nombreVentana, tipoVentana);
+		imshow(nombreVentana, im);
+	}
+	else
+		cout << "La imagen no se cargo correctamente" << endl;
+}
+
+
+/*
+Funcion que combina varias imagenes en una sola.
+@nombreVentana = nombre de la ventana en la que mostrar la imagen resultante.
+@imagenes = lista de imagenes a mostrar.
+*/
+void mostrarImagenes(string nombreVentana, vector<Mat> &imagenes) {
+	int colCollage = 0, filCollage = 0; //aqui almacenaremos las columnas y las filas de la imagen que sera la union de todas las demas.
+	int contadorColumnas = 0;
+	for (Mat & im : imagenes) {
+		if (im.channels() < 3) cvtColor(im, im, CV_GRAY2RGB); //cambiamos la codificacion del color de algunas im?genes para que no nos de fallos al crear el collage.
+		colCollage += im.cols; //sumamos las columnas
+		if (im.rows > filCollage) filCollage = im.rows; //obtenemos el maximo numero de filas que vamos a necesitar
+	}
+
+	Mat collage = Mat::zeros(filCollage, colCollage, CV_8UC3); //Creamos la imagen con las dimensiones deseadas y todos los p?xeles inicializados a cero.
+
+	Rect roi; //objeto con el que definiremos el ROI
+	Mat imroi; //submatriz de la imagen Collage donde copiaremos la imagen que corresponda.
+
+	for (Mat & im : imagenes) {
+		roi = Rect(contadorColumnas, 0, im.cols, im.rows); //Vamos moviendo el ROI para que las imagenes queden juntas y ajustandolo al tamaño de la imagen que corresponda.
+		contadorColumnas += im.cols;
+		imroi = Mat(collage, roi); //(stackoverflow.com/questions/8206466/how-to-set-roi-in-opencv)
+
+		im.copyTo(imroi);
+		//Lo que sucede cuando no coincide el formato de destino y el de origen es que lo que se copia son pixeles negros.
+	}
+
+	mostrarImagen(nombreVentana, collage, 0);
+
+}
+
 
 void mostrarMatriz(Mat &m) {
 	for (int i = 0; i < m.rows; i++) {
@@ -36,7 +80,7 @@ public:
 };
 
 /*
-Funcion que obtiene la matriz de coeficientes para el sistema del calculo de la homografia dados los puntos muestreados en las im�genes estudiadas.
+Funcion que obtiene la matriz de coeficientes para el sistema del calculo de la homografia dados los puntos muestreados en las imagenes estudiadas.
 @puntos_origen: puntos muestreados en la imagen de partida.
 @puntos_destino: puntos muestreados en la imagen de destino.
 */
@@ -59,7 +103,7 @@ Mat obtenerMatrizCoeficientes(vector<Punto> puntos_origen, vector<Punto> puntos_
 }
 
 /*
-Funci�n que obtiene la matriz de trasnformacion que lleva una imagen a la otra, de forma aproximada:
+Funcion que obtiene la matriz de trasnformacion que lleva una imagen a la otra, de forma aproximada:
 @puntos_origen: puntos muestreados en la imagen de partida.
 @puntos_destino: puntos muestreados en la imagen de destino.
 */
@@ -86,14 +130,14 @@ Mat obtenerMatrizTransformacion(vector<Punto> puntos_origen, vector<Punto> punto
 Funcion que obtiene los KeyPoints de una imagen con el detector BRISK.
 @im: imagen a la que le calculamos los KeyPoints
 @umbral: parametro de umbral (thresh) para el detector BRISK a usar.
-@octavas: parametro de octavas (octaves) para el detector BRISK a usar.
-@escalaDePatron: parametro de escala del patron (patternScale) para el detector BRISK a usar.
 */
 
 vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30) {
+	//Creamos el detector
 	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
 	vector<KeyPoint> puntosDetectados;
-
+	
+	//Obtenemos los KP:
 	ptrDetectorBRISK->detect(im, puntosDetectados);
 
 	return puntosDetectados;
@@ -107,9 +151,11 @@ Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
 @umbral_FAST: umbral para elegir los puntos segun la medidad elegida
 */
 vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20){
+	//Creamos el detector:
 	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
 	vector<KeyPoint> puntosDetectados;
-
+	
+	//Obtenemos los KP:
 	ptrDetectorORB->detect(im, puntosDetectados);
 
 	return puntosDetectados;
@@ -122,12 +168,15 @@ Funcion que obtiene los descriptores de los KeyPoints localizados mediante un de
 @umbral: parametro de umbral para el detector BRISK a usar
 */
 Mat obtenerDescriptoresBRISK (Mat im, int umbral = 30) {
+	//Creamos el detector:
 	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
 	vector<KeyPoint> puntosDetectados;
 	Mat descriptores;
 	
+	//Obtenemos los KP:
 	ptrDetectorBRISK->detect(im, puntosDetectados);
 	
+	//Obtenemos los descriptores para estos KP:
 	ptrDetectorBRISK->compute(im, puntosDetectados, descriptores);
 	
 	return descriptores;
@@ -141,12 +190,15 @@ Funcion que obtiene los descriptores de los KeyPoints localizados mediante un de
 @umbral_FAST: umbral para elegir los puntos segun la medidad elegida
 */
 Mat obtenerDescriptoresORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20) {
+	//Creamos el detector:
 	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
 	vector<KeyPoint> puntosDetectados;
 	Mat descriptores;
 	
+	//Obtenemos los KP:
 	ptrDetectorORB->detect(im, puntosDetectados);
 	
+	//Obtenemos los descriptores para estos KP:
 	ptrDetectorORB->compute(im, puntosDetectados, descriptores);
 	
 	return descriptores;
@@ -175,15 +227,16 @@ vector<DMatch> obtenerMatchesFuerzaBrutaBRISK (Mat im1, Mat im2, int umbral){
 	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
 	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
 	
+	//clock_t t_inicio= clock();
 	//Calculamos los matches entre ambas imagenes:
 	matcher.match(descriptores1, descriptores2, matches);		
+	//printf("FB ha tardado: %.2fs\n",(double)(clock() - t_inicio)/CLOCKS_PER_SEC);
 	
 	return matches;
 }
 
 /*
 Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada + ORB
-
 @im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
 */
 vector<DMatch> obtenerMatchesFuerzaBrutaORB (Mat im1, Mat im2){
@@ -194,7 +247,7 @@ vector<DMatch> obtenerMatchesFuerzaBrutaORB (Mat im1, Mat im2){
 	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
 	BFMatcher matcher = BFMatcher(NORM_L2, true);
 	
-	//Obtenemos los Key Points con BRISK:
+	//Obtenemos los Key Points con ORB:
 	puntosDetectados1 = obtenerKeyPointsORB(im1, 1000, ORB::HARRIS_SCORE, 35);
 	puntosDetectados2 = obtenerKeyPointsORB(im2, 1000, ORB::HARRIS_SCORE, 35);
 	
@@ -220,9 +273,10 @@ vector<DMatch> obtenerMatchesFlannBRISK (Mat im1, Mat im2, int umbral){
 	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
 	
-	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	//Creamos el matcher con FLANN.
 	FlannBasedMatcher matcher;
 	
+	//Obtenemos los Key Points con BRISK:
 	puntosDetectados1 = obtenerKeyPointsBRISK(im1, umbral);
 	puntosDetectados2 = obtenerKeyPointsBRISK(im2, umbral);
 	
@@ -235,8 +289,10 @@ vector<DMatch> obtenerMatchesFlannBRISK (Mat im1, Mat im2, int umbral){
 	descriptores1.convertTo(descriptores1, CV_32F);
 	descriptores2.convertTo(descriptores2, CV_32F);
 	
-	
-	matcher.match(descriptores1, descriptores2, matches);	
+	//clock_t t_inicio = clock();
+	matcher.match(descriptores1, descriptores2, matches);
+	//printf("FLANN ha tardado: %.2fs\n",(double)(clock() - t_inicio)/CLOCKS_PER_SEC);
+		
 	
 	return matches;
 }
@@ -250,9 +306,10 @@ vector<DMatch> obtenerMatchesFlannORB (Mat im1, Mat im2){
 	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
 	
-	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	//Creamos el matcher con FLANN.
 	FlannBasedMatcher matcher;
 	
+	//Obtenemos los Key Points con ORB:
 	puntosDetectados1 = obtenerKeyPointsORB(im1, 1000, ORB::HARRIS_SCORE, 35);
 	puntosDetectados2 = obtenerKeyPointsORB(im2, 1000, ORB::HARRIS_SCORE, 35);
 	
@@ -294,10 +351,10 @@ Mat calcularHomografia (Mat origen, Mat destino) {
 		puntosEnCorrespondenciasDestino.push_back(puntosDetectadosDestino[matches[i].trainIdx].pt);	
 	}
 	
-	//Calculamos la homografia con los puntos en correspondencias:
-	
+	//Calculamos la homografia con los puntos en correspondencias:	
 	Mat H = findHomography(puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino, CV_RANSAC);
 	
+	//Pasamos las homografia a 32F:
 	H.convertTo(H, CV_32F);
 	
 	return H;
@@ -308,8 +365,8 @@ Mat calcularHomografia (Mat origen, Mat destino) {
 Funcion que obtiene un mosaico de proyeccion plana de dos imagenes
 @origen y destino: imagenes con las que formar el mosaico.
 */
-
 Mat mosaicoDeDos (Mat origen, Mat destino) {
+	//Creamos la imagen donde proyectaremos ambas imagenes:
 	Mat mosaico = Mat(550, 1000, origen.type());
 		
 	//Colocamos la primera imagen en la esquina superior izquierda por medio de la identidad:
@@ -320,8 +377,10 @@ Mat mosaicoDeDos (Mat origen, Mat destino) {
 		
 	warpPerspective(destino, mosaico, id, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_CONSTANT);
 	
+	//Calculamos la homografia que lleva la segunda imagen a la que hemos colocado primero en el plano de proyeccion:
 	Mat homografia = calcularHomografia(origen, destino);
 	
+	//Colocamos la segunda imagen por medio de esa homografia (compuesta con la identidad):
 	warpPerspective(origen, mosaico, homografia, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);
 	
 	return mosaico;	
@@ -333,7 +392,10 @@ Funcion que obtiene un mosaico de proyeccion plana con varias imagenes comenzand
 */
 
 Mat mosaicoDeN (vector<Mat> imagenes) {
+	//Creamos la imagen donde formaremos el mosaico:
 	Mat mosaico = Mat(700, 1100, imagenes.at(0).type());
+	
+	//Seleccionamos la posicion de la imagen central de la secuencia:
 	int posicion_central = imagenes.size()/2;
 	
 	//Colocamos la imagen central del vector en el centro del mosaico
@@ -350,9 +412,14 @@ Mat mosaicoDeN (vector<Mat> imagenes) {
 	
 	//Matrices donde se acumularan las homografias a cada uno de los lados de la imagen central:
 	Mat Hizda, Hdcha;
+	//Las inicializamos con la homografia que hemos calculado antes, la que seria la H0:
 	colocacionCentral.copyTo(Hizda);
 	colocacionCentral.copyTo(Hdcha);
 	
+	/*
+	Vamos formando el mosaico empezando desde la imagen central y desplazandonos a ambos extremos.
+	En cada iteracion calculamos la homografia que queda cada imagen al mosaico componiendo con las que ya se han calculado para las imagenes anteriores.	
+	*/
 	for (int i = 1; i <= posicion_central; i++) {
 		if (posicion_central-i >= 0){
 			Hizda = Hizda * calcularHomografia(imagenes.at(posicion_central-i), imagenes.at(posicion_central-i+1));
@@ -378,7 +445,7 @@ Mat mosaicoDeNMalo (vector<Mat> imagenes) {
 
 	Mat mosaico = Mat(700, 1100, imagenes.at(0).type());
 	
-	//Colocamos la imagen central del vector en el centro del mosaico
+	//Colocamos la primera imagen en la parte izquierda del mosaico pero no arriba del todo:
 	Mat colocacionInicial = Mat(3,3,CV_32F,0.0);
 	
 	for (int i = 0; i < 3; i++)
@@ -391,8 +458,13 @@ Mat mosaicoDeNMalo (vector<Mat> imagenes) {
 	
 	//Matriz donde se acumularan las homografias segun vamos colocando imagenes en el mosaico:
 	Mat H;
+	//Se inicializa con la homografia calculada anteriormente:
 	colocacionInicial.copyTo(H);
 	
+	/*
+	Vamos recorriendo la secuencia de imagenes hacia la derecha.
+	Calculamos la homografia que lleva la imagen actual a la anterior y la acumulamos (componemos) con las previamente calculadas.	
+	*/
 	for (int i = 1; i < imagenes.size(); i++) {
 		H = H * calcularHomografia(imagenes.at(i), imagenes.at(i-1));
 		warpPerspective(imagenes.at(i), mosaico, H, Size(mosaico.cols, mosaico.rows), INTER_LINEAR, BORDER_TRANSPARENT);	
@@ -513,7 +585,7 @@ void parte3(Mat yose1, Mat yose2) {
 	
 	vector<KeyPoint> puntosDetectadosYose1, puntosDetectadosYose2;
 	vector<DMatch> matchesFB, matchesFLANN;
-	Mat imagenMatchesFB, imagenMatchesFLANN;
+	Mat imagenMatchesFBBRISK, imagenMatchesFBORB, imagenMatchesFLANNBRISK, imagenMatchesFLANNORB;
 	
 	puntosDetectadosYose1 = obtenerKeyPointsBRISK(yose1, 65);
 	puntosDetectadosYose2 = obtenerKeyPointsBRISK(yose2, 65);
@@ -522,18 +594,38 @@ void parte3(Mat yose1, Mat yose2) {
 	
 	cout << "Se han obtenido " << matchesFB.size() << " matches con Fuerza Bruta + Cross check + BRISK" << endl;
 	
-	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFB, imagenMatchesFB, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFB, imagenMatchesFBBRISK, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 	
-	imshow("Matches Fuerza Bruta", imagenMatchesFB);
+	imshow("Matches Fuerza Bruta con BRISK", imagenMatchesFBBRISK);
 	
 	matchesFLANN = obtenerMatchesFlannBRISK(yose1, yose2, 65);
 	
 	cout << "Se han obtenido " << matchesFLANN.size() << " matches con FLANN + BRISK" << endl;
 	
-	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFLANN, imagenMatchesFLANN, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFLANN, imagenMatchesFLANNBRISK, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 	
 	
-	imshow("Matches Flann", imagenMatchesFLANN);
+	imshow("Matches Flann con BRISK", imagenMatchesFLANNBRISK);
+	
+	puntosDetectadosYose1 = obtenerKeyPointsORB(yose1, 1000, ORB::HARRIS_SCORE, 35);
+	puntosDetectadosYose2 = obtenerKeyPointsORB(yose2, 1000, ORB::HARRIS_SCORE, 35);
+
+	matchesFB = obtenerMatchesFuerzaBrutaORB(yose1, yose2);
+	
+	cout << "Se han obtenido " << matchesFB.size() << " matches con Fuerza Bruta + Cross check + ORB" << endl;
+	
+	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFB, imagenMatchesFBORB, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	imshow("Matches Fuerza Bruta con ORB", imagenMatchesFBORB);
+	
+	matchesFLANN = obtenerMatchesFlannORB(yose1, yose2);
+	
+	cout << "Se han obtenido " << matchesFLANN.size() << " matches con FLANN + ORB" << endl;
+	
+	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFLANN, imagenMatchesFLANNORB, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	
+	imshow("Matches Flann con ORB", imagenMatchesFLANNORB);
 	
 	waitKey(0);
 	destroyAllWindows();
@@ -604,7 +696,7 @@ PARTE 1: ESTIMACION DE LA HOMOGRAFIA
 =====================================
 */
 
-	//parte1();
+	parte1();
 
 /*
 ==========================
@@ -617,7 +709,7 @@ PARTE 2: EXTRAER KEYPOINTS
 	Mat yose2 = imread("imagenes/Yosemite2.jpg");
 
 
-	//parte2(yose1, yose2);
+	parte2(yose1, yose2);
 	
 
 /*
@@ -626,7 +718,7 @@ PARTE 3: DESCRIPTORES Y MATCHES
 ===============================
 */
 
-	//parte3(yose1, yose2);
+	parte3(yose1, yose2);
 
 /*
 =================================
@@ -634,7 +726,7 @@ PARTE 4: MOSAICO CON DOS IMAGENES
 =================================
 */
 
-	//parte4(yose1, yose2);
+	parte4(yose1, yose2);
 /*
 ====================================
 PARTE 5: MOSAICO CON VARIAS IMAGENES
