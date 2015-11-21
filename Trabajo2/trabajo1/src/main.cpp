@@ -530,12 +530,15 @@ void parte1() {
 	ptos_tablero2.push_back(Punto(137, 64));
 	ptos_tablero2.push_back(Punto(163, 69));
 	ptos_tablero2.push_back(Punto(131, 90));*/
-
+	
+	//Obtenemos la homografia que lleva una imagen en la otra:
 	Mat H = obtenerMatrizTransformacion(ptos_tablero1, ptos_tablero2);
 	Mat tablero1_transformada;
-
+	
+	//Se la aplicamos a la imagen
 	warpPerspective(tablero1, tablero1_transformada, H, Size(tablero2.cols, tablero2.rows));
-
+	
+	//Mostramos las tres imagenes para comparar los resultados:
 	vector<Mat> imagenes;
 
 	imagenes.push_back(tablero1);
@@ -557,7 +560,8 @@ void parte2(Mat yose1, Mat yose2) {
 	
 	vector<KeyPoint> puntosDetectados; //donde almacenaremos los puntos detectados para cada imagen por cada criterio, reutilizable.
 	Mat yose1KPBRISK, yose1KPORB, yose2KPBRISK, yose2KPORB; //las imagenes correspondientes pintando los puntos detectados.
-
+	
+	//Vamos obteniendo de cada una de las dos imagenes los puntos detectados con los dos criterios a usar y mostrando dichos puntos por pantalla:
 	puntosDetectados = obtenerKeyPointsBRISK(yose1, 65);
 	cout << "En Yosemite1 con BRISK hemos obtenido: " << puntosDetectados.size() << " puntos" << endl;
 	drawKeypoints(yose1, puntosDetectados, yose1KPBRISK);
@@ -587,16 +591,21 @@ void parte3(Mat yose1, Mat yose2) {
 	vector<DMatch> matchesFB, matchesFLANN;
 	Mat imagenMatchesFBBRISK, imagenMatchesFBORB, imagenMatchesFLANNBRISK, imagenMatchesFLANNORB;
 	
+	//Obtenemos los puntos con BRISK
 	puntosDetectadosYose1 = obtenerKeyPointsBRISK(yose1, 65);
 	puntosDetectadosYose2 = obtenerKeyPointsBRISK(yose2, 65);
-
+	
+	//Obtenemos los matches con FB sobre estos puntos:
 	matchesFB = obtenerMatchesFuerzaBrutaBRISK(yose1, yose2, 65);
 	
 	cout << "Se han obtenido " << matchesFB.size() << " matches con Fuerza Bruta + Cross check + BRISK" << endl;
 	
+	//Mostramos los matches dibujandolos:
 	drawMatches( yose1, puntosDetectadosYose1, yose2, puntosDetectadosYose2, matchesFB, imagenMatchesFBBRISK, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 	
 	imshow("Matches Fuerza Bruta con BRISK", imagenMatchesFBBRISK);
+	
+	//El mecanismo se repite para cada combinacion restante BRISK + ORB, FLANN + BRISK y FLANN + ORB:
 	
 	matchesFLANN = obtenerMatchesFlannBRISK(yose1, yose2, 65);
 	
