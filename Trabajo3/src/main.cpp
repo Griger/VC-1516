@@ -1,7 +1,20 @@
+#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <stdlib.h>
 
 using namespace std;
+using namespace cv;
+
+void mostrarMatriz(Mat m) {
+	int f = m.rows;
+	int c = m.cols;
+	
+	for (int i = 0; i < f; i++){
+		for (int j = 0; j < c; j++)
+			cout << m.at<float>(i,j) << " ";
+		cout << endl;
+	}
+}
 
 /*
 Funcion que devuelve un valor aleatorio en el intervalo [0,1]
@@ -14,8 +27,8 @@ float generadorAleatorio() {
 Funcion que genera una camara aleatoria 
 */
 Mat generarCamaraAleatoria() {
-	camara = Mat(3,4,CV_32F);
-	camara_correcta = false;
+	Mat camara = Mat(3,4,CV_32F);
+	bool camara_correcta = false;
 
 	//Mientras que la camara no tenga el menor distinto de cero
 	while (!camara_correcta) {
@@ -25,7 +38,7 @@ Mat generarCamaraAleatoria() {
 
 		//Tomamos la submatriz a la que queremos calcular el determinante
 		Mat submatriz = Mat(camara, Range::all(), Range(0,3));
-
+		
 		if (determinant(submatriz) != 0)
 			camara_correcta = true;
 	}
@@ -47,13 +60,21 @@ vector<Point3f> generarPtosMundo() {
 
 //Funcion donde se estructura los pasos necesarios para el primer punto de la practica
 void parte1() {
-	camara_generada = generarCamaraAleatoria();
-	ptos_mundo = generarPtosMundo();
+	Mat camara_generada = generarCamaraAleatoria();
+	
+	cout << "La camara generada es:" << endl;
+	mostrarMatriz(camara_generada);
+	
+	
+	//ptos_mundo = generarPtosMundo();
+	
+	
 
 
 }
 
 
 int main() {
+	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	parte1();
 }
