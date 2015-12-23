@@ -46,7 +46,9 @@ Mat generarCamaraAleatoria() {
 	return camara;
 }
 
-//Generacion de puntos del mundo:
+/*
+Generacion de puntos del mundo:
+*/
 vector<Mat> generarPtosMundo() {
 	vector<Mat> puntos_mundo;
 	Mat m;
@@ -72,10 +74,59 @@ vector<Mat> generarPtosMundo() {
 	return puntos_mundo;
 }
 
+/*
+Generacion de la matriz de coeficientes para el algoritmo SLV a partir de ptos del mundo y proyectados.
+@ptos_mundos: las coordenadas 3D de los ptos del mundo (matrices 4x1)
+@ptos_proyectados: las coordenadas 2D de la proyeccion de los ptos del mundo (matrices 3x1)
+*/
+Mat obtenerMatrizCoeficientes (vector<Mat> ptos_mundo, vector<Mat> ptos_proyectados) {
+	int f = 2 * ptos_mundo.size();
+	int c = 12;
+	Mat pto_mundo_actual, pto_proyectado_actual;
+	
+	//Creamos la matriz de coeficientes inicializada a cero, ahorrando pasos para cuando la instanciemos al caso particular.
+	Mat m_coeff = Mat (f, c, CV_32F, 0.0);
+	
+	//Rellenamos la matriz segun el esquema que ha detener al resolver el sistema de ecuaciones relacionado con ella.
+	for (int i = 0; i < f; i = i+2) {
+		pto_mundo_actual = ptos_mundo.at(i);
+		pto_proyectado_actual = ptos_proyectados.at(i);
+		
+		m_coeff.at<float>(i,0) = pto_mundo_actual.at<float>(0,0);
+		m_coeff.at<float>(i,1) = pto_mundo_actual.at<float>(1,0);
+		m_coeff.at<float>(i,2) = pto_mundo_actual.at<float>(2,0);
+		m_coeff.at<float>(i,3) = 1.0;
+		
+		m_coeff.at<float>(i,8) = -pto_proyectado_actual.at<float>(0,0) * pto_mundo_actual.at<float>(0,0);
+		m_coeff.at<float>(i,9) = -pto_proyectado_actual.at<float>(0,0) * pto_mundo_actual.at<float>(1,0);
+		m_coeff.at<float>(i,10) = -pto_proyectado_actual.at<float>(0,0) * pto_mundo_actual.at<float>(2,0);
+		m_coeff.at<float>(i,11) = -pto_proyectado_actual.at<float>(0,0);
+		
+		m_coeff.at<float>(i+1,4) = pto_mundo_actual.at<float>(0,0);
+		m_coeff.at<float>(i+1,5) = pto_mundo_actual.at<float>(1,0);
+		m_coeff.at<float>(i+1,6) = pto_mundo_actual.at<float>(2,0);
+		m_coeff.at<float>(i+1,7) = 1.0;
+		
+		m_coeff.at<float>(i+1,8) = -pto_proyectado_actual.at<float>(1,0) * pto_mundo_actual.at<float>(0,0);
+		m_coeff.at<float>(i+1,9) = -pto_proyectado_actual.at<float>(1,0) * pto_mundo_actual.at<float>(1,0);
+		m_coeff.at<float>(i+1,10) = -pto_proyectado_actual.at<float>(1,0) * pto_mundo_actual.at<float>(2,0);
+		m_coeff.at<float>(i+1,11) = -pto_proyectado_actual.at<float>(1,0);	
+	
+	}
+	
+	
+	return m_coeff;
+
+
+
+
+
+}
+
 //Funcion donde se estructura los pasos necesarios para el primer punto de la practica
 void parte1() {
 	Mat camara_generada = generarCamaraAleatoria();
-	
+		
 	vector<Mat> ptos_mundo = generarPtosMundo();
 	
 	
