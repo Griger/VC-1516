@@ -14,13 +14,15 @@ void mostrarMatriz(Mat m) {
 			cout << m.at<float>(i,j) << " ";
 		cout << endl;
 	}
+	
+	cout << endl;
 }
 
 /*
-Funcion que devuelve un valor aleatorio en el intervalo [0,1]
+Funcion que devuelve un valor aleatorio en el intervalo (0,1]
 */
 float generadorAleatorio() {
-	return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+	return static_cast <float> (rand()+1) / static_cast <float> (RAND_MAX);
 }
 
 /*
@@ -74,6 +76,25 @@ vector<Mat> generarPtosMundo() {
 	return puntos_mundo;
 }
 
+
+/*
+Funcion que obtiene la proyeccion de ptos 3D por medio de una camara.
+*/
+vector<Mat> obtenerPtosProyectados (vector<Mat> ptos_mundo, Mat camara) {
+	vector<Mat> proyecciones;
+	
+	//Aplicamos la matriz de camara al vector columna del pto.
+	for (int i = 0; i < ptos_mundo.size(); i++)
+		proyecciones.push_back(camara * ptos_mundo.at(i));
+	
+	//Homogeneizamos la tercera componente de cada pto.	
+	for (int i = 0; i < proyecciones.size(); i++)
+		proyecciones.at(i) = proyecciones.at(i) / proyecciones.at(i).at<float>(2,0);
+		
+	return proyecciones;
+}
+
+
 /*
 Generacion de la matriz de coeficientes para el algoritmo SLV a partir de ptos del mundo y proyectados.
 @ptos_mundos: las coordenadas 3D de los ptos del mundo (matrices 4x1)
@@ -89,8 +110,8 @@ Mat obtenerMatrizCoeficientes (vector<Mat> ptos_mundo, vector<Mat> ptos_proyecta
 	
 	//Rellenamos la matriz segun el esquema que ha detener al resolver el sistema de ecuaciones relacionado con ella.
 	for (int i = 0; i < f; i = i+2) {
-		pto_mundo_actual = ptos_mundo.at(i);
-		pto_proyectado_actual = ptos_proyectados.at(i);
+		pto_mundo_actual = ptos_mundo.at(i/2);
+		pto_proyectado_actual = ptos_proyectados.at(i/2);
 		
 		m_coeff.at<float>(i,0) = pto_mundo_actual.at<float>(0,0);
 		m_coeff.at<float>(i,1) = pto_mundo_actual.at<float>(1,0);
@@ -149,7 +170,7 @@ Funcion que calcula la distancia entre dos matrices (con las mismas dimensiones)
 */
 double calcularDistanciaMatrices (Mat A, Mat B) { 
 	//Falta normalizar A y B.
-	Mat diferencia = A - B;
+	Mat diferencia = (A/A.at<float>(0,0)) - (B/B.at<float>(0,0));
 	int f = diferencia.rows;
 	int c = diferencia.cols;
 	
@@ -166,29 +187,26 @@ double calcularDistanciaMatrices (Mat A, Mat B) {
 //Funcion donde se estructura los pasos necesarios para el primer punto de la practica
 void parte1() {
 	Mat camara_generada = generarCamaraAleatoria();
-		
+	
 	vector<Mat> ptos_mundo = generarPtosMundo();
 	
+	vector<Mat> proyecciones_camara_original = obtenerPtosProyectados (ptos_mundo, camara_generada);
 	
-
-
+	Mat camara_estimada = estimarCamaraDLT(ptos_mundo, proyecciones_camara_original);
+	
+	cout << "La camara original es: " << endl;
+	mostrarMatriz(camara_generada);
+	cout<< "La camara estimada es: " << endl;
+	mostrarMatriz(camara_estimada);
+	
+	cout << "El error cometido en la aproximacion es: " << calcularDistanciaMatrices(camara_generada, camara_estimada) << endl;
+	
 }
 
 
 int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
-	parte1();
+	parte1();	
 	
-	/*Mat a = Mat(3,1,CV_32F);
-	a.at<float>(0,0) = 1;
-	a.at<float>(1,0) = 1;
-	a.at<float>(2,0) = 1;
-	
-	Mat b = Mat(3,1,CV_32F);
-	b.at<float>(0,0) = 1;
-	b.at<float>(1,0) = 2;
-	b.at<float>(2,0) = 3;
-	
-	cout << b.dot(a) << endl;*/
 	
 }
