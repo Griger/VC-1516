@@ -47,13 +47,27 @@ Mat generarCamaraAleatoria() {
 }
 
 //Generacion de puntos del mundo:
-vector<Point3f> generarPtosMundo() {
-	vector<Point3f> puntos_mundo;
+vector<Mat> generarPtosMundo() {
+	vector<Mat> puntos_mundo;
+	Mat m;
+	
+	//Creamos los ptos del mundo como matrices columna con cuatro componente siendo la cuarta siempre 1:
 	for (int i = 1; i <= 10;  i++)
 		for (int j = 1; j <= 10; j++){
-			puntos_mundo.push_back(Point3f(0,i*0.1, j*0.1));
-			puntos_mundo.push_back(Point3f(j*0.1, i*0.1, 0));
+			m = Mat(4, 1, CV_32F, 1.0);
+			m.at<float>(0,0) = 0.0; m.at<float>(1,0) = i*0.1; m.at<float>(2,0) = j*0.1;
+			puntos_mundo.push_back(m);
+			
+			m = Mat(4, 1, CV_32F, 1.0);
+			m.at<float>(0,0) = j*0.1; m.at<float>(1,0) = i*0.1; m.at<float>(2,0) = 0.0;
+			puntos_mundo.push_back(m);
 		}
+		
+	/*for (int i = 0; i < puntos_mundo.size(); i++) {
+		cout << "Pto" << i << endl;
+		mostrarMatriz(puntos_mundo.at(i));
+	}*/
+		
 
 	return puntos_mundo;
 }
@@ -62,11 +76,7 @@ vector<Point3f> generarPtosMundo() {
 void parte1() {
 	Mat camara_generada = generarCamaraAleatoria();
 	
-	cout << "La camara generada es:" << endl;
-	mostrarMatriz(camara_generada);
-	
-	
-	//ptos_mundo = generarPtosMundo();
+	vector<Mat> ptos_mundo = generarPtosMundo();
 	
 	
 
@@ -77,4 +87,17 @@ void parte1() {
 int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	parte1();
+	
+	/*Mat a = Mat(3,1,CV_32F);
+	a.at<float>(0,0) = 1;
+	a.at<float>(1,0) = 1;
+	a.at<float>(2,0) = 1;
+	
+	Mat b = Mat(3,1,CV_32F);
+	b.at<float>(0,0) = 1;
+	b.at<float>(1,0) = 2;
+	b.at<float>(2,0) = 3;
+	
+	cout << b.dot(a) << endl;*/
+	
 }
