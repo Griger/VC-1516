@@ -116,11 +116,51 @@ Mat obtenerMatrizCoeficientes (vector<Mat> ptos_mundo, vector<Mat> ptos_proyecta
 	
 	
 	return m_coeff;
+}
 
 
+/*
+Funcion que estima una camara a partir de unos ptos del mundo y de sus proyecciones.
+@ptos_mundos: las coordenadas 3D de los ptos del mundo (matrices 4x1)
+@ptos_proyectados: las coordenadas 2D de la proyeccion de los ptos del mundo (matrices 3x1)
+*/
+Mat estimarCamaraDLT (vector<Mat> ptos_mundo, vector<Mat> ptos_proyectados) {
+	Mat A, w, u, vt;
+	
+	A = obtenerMatrizCoeficientes(ptos_mundo, ptos_proyectados);
+	
+	//Obtenemos la descomposicion SVD de la matriz de coeficientes, la matriz que nos interesa es la vT:
+	SVD::compute(A, w, u, vt);
 
+	Mat camara_estimada = Mat(3, 4, CV_32F);
 
+	//Construimos la matriz de transformacion con la ultima columna de v o lo que es lo mismo la ultima fila de vT:
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 4; j++)
+			camara_estimada.at<float>(i, j) = vt.at<float>(11, i * 4 + j);
 
+	return camara_estimada;	
+}
+
+/*
+Funcion que calcula la distancia entre dos matrices (con las mismas dimensiones) con la norma de Frobenius.
+@A: la primera matriz.
+@B: la segunda matriz.
+*/
+double calcularDistanciaMatrices (Mat A, Mat B) { 
+	//Falta normalizar A y B.
+	Mat diferencia = A - B;
+	int f = diferencia.rows;
+	int c = diferencia.cols;
+	
+	double sum = 0.0;
+	
+	for (int i = 0; i < f; i++)
+		for (int j = 0; j < c; j++)
+			sum += diferencia.at<float>(i,j) * diferencia.at<float>(i,j);
+			
+			
+	return sqrt(sum);
 }
 
 //Funcion donde se estructura los pasos necesarios para el primer punto de la practica
