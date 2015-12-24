@@ -210,16 +210,23 @@ void dibujarPtos(vector<Mat> ptos, Mat im, Scalar color) {
 		else if (y_min > ptos.at(i).at<float>(1,0))
 			y_min = ptos.at(i).at<float>(1,0);
 	}
+	
+	cout << "El rango maximo de la x es: (" << x_min << "," << x_max << ")" << endl;
+	cout << "El rango maximo de la y es: (" << y_min << "," << y_max << ")" << endl;
+	
+	float longitud_x = (x_max - x_min);
+	float longitud_y = (y_max - y_min);
+	
+	cout << "Longitud x: " << longitud_x << endl;
+	cout << "Longitud y: " << longitud_y << endl;
 
-	float paso_x = (x_max - x_min) / (c*1.0);
-	float paso_y = (y_max - y_min) / (f*1.0);
-
-	float x, float y;
+	float x, y;
 	for (int i = 0; i < ptos.size(); i++) {
 		x = ptos.at(i).at<float>(0,0);
 		y = ptos.at(i).at<float>(1,0);
-		circle(im, Point(ceil(x/paso_x),ceil(y/paso_y)), 1, color);
-	}
+		circle(im, Point(ceil((x-x_min)*c*longitud_x),ceil((y-y_min)*f*longitud_y)), 1, color);
+	}	
+	
 }
 
 //Funcion donde se estructura los pasos necesarios para el primer punto de la practica
@@ -234,14 +241,20 @@ void parte1() {
 
 	vector<Mat> proyecciones_camara_estimada = obtenerPtosProyectados(ptos_mundo, camara_estimada);
 
-	Mat imagen_ptos = Mat::zeros(500, 500, CV_32FC3);
+	Mat imagen_ptos_originales = Mat::zeros(500, 500, CV_32FC3);
+	Mat imagen_ptos_estimados = Mat::zeros(500, 500, CV_32FC3);
 
-	dibujarPtos(imagen_ptos, proyecciones_camara_original, Scalar(255, 0, 0));
-	dibujarPtos(imagen_ptos, proyecciones_camara_estimada, Scalar(0,0, 255));
+	dibujarPtos(proyecciones_camara_original, imagen_ptos_originales, Scalar(255, 0, 0));
+	dibujarPtos(proyecciones_camara_estimada, imagen_ptos_estimados, Scalar(0, 255, 255));
 
-	imshow("Ptos proyectados (azul) y ptos estimados (rojo)", imagen_ptos);
+	//imshow("Ptos proyectados (azul) y ptos estimados (rojo)", imagen_ptos);
+	imshow("Ptos proyectados", imagen_ptos_originales);
+imshow("Ptos estimados", imagen_ptos_estimados);
+
 
 	cout << "El error cometido en la aproximacion es: " << calcularDistanciaMatrices(camara_generada, camara_estimada) << endl;
+	
+	waitKey(0);
 }
 
 
