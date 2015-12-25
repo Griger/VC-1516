@@ -210,13 +210,13 @@ void dibujarPtos(vector<Mat> ptos, Mat im, Scalar color) {
 		else if (y_min > ptos.at(i).at<float>(1,0))
 			y_min = ptos.at(i).at<float>(1,0);
 	}
-	
+
 	cout << "El rango maximo de la x es: (" << x_min << "," << x_max << ")" << endl;
 	cout << "El rango maximo de la y es: (" << y_min << "," << y_max << ")" << endl;
-	
+
 	float longitud_x = (x_max - x_min);
 	float longitud_y = (y_max - y_min);
-	
+
 	cout << "Longitud x: " << longitud_x << endl;
 	cout << "Longitud y: " << longitud_y << endl;
 
@@ -225,11 +225,11 @@ void dibujarPtos(vector<Mat> ptos, Mat im, Scalar color) {
 		x = ptos.at(i).at<float>(0,0);
 		y = ptos.at(i).at<float>(1,0);
 		circle(im, Point(ceil((x-x_min)*c*longitud_x),ceil((y-y_min)*f*longitud_y)), 1, color);
-	}	
-	
+	}
+
 }
 
-//Funcion donde se estructura los pasos necesarios para el primer punto de la practica
+//Funcion donde se estructuran los pasos necesarios para el primer punto de la practica
 void parte1() {
 	Mat camara_generada = generarCamaraAleatoria();
 
@@ -249,12 +249,43 @@ void parte1() {
 
 	//imshow("Ptos proyectados (azul) y ptos estimados (rojo)", imagen_ptos);
 	imshow("Ptos proyectados", imagen_ptos_originales);
-imshow("Ptos estimados", imagen_ptos_estimados);
+	imshow("Ptos estimados", imagen_ptos_estimados);
 
 
 	cout << "El error cometido en la aproximacion es: " << calcularDistanciaMatrices(camara_generada, camara_estimada) << endl;
-	
+
 	waitKey(0);
+	destroyAllWindows();
+}
+
+//Funcion donde se estructuran los pasos necesarios para el segundo punto de la practica.
+void parte2() {
+	//Cargamos las imagenes en color:
+	vector<Mat> imagenes_tablero, imagenes_calibracion;
+	vector<Point2f> esquinas_img_actual;
+	vector<vector<Point2f>> esquinas_imgs_calibracion;
+
+	for (int i = 1; i <= 25; i++)
+		imagenes_tablero.push_back( imread("imagenes/chessboard/Image"+to_string(i)+".tif"));
+
+	//Obtenemos las posiciones de las esquinas del tablero en las imagen donde podamos localizarlas.
+	for (int i = 0; i < 25; i++) {
+		if ( findChessboardCorners(imagenes_tablero.at(i), Size(13,12), esquinas_img_actual) ) {
+			imagenes_calibracion.push_back(imagenes_tablero.at(i));
+			esquinas_imgs_calibracion.push_back(esquinas_img_actual);
+		}
+
+		esquinas_img_actual.clear();
+	}
+
+	//Refinamos las coordenadas obtenidas anteriormente.
+	for (int = 0; imagenes_calibracion.size(); i++) {
+		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+	}
+
+	
+
+
 }
 
 
