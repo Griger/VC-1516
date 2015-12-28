@@ -265,12 +265,14 @@ void parte2() {
 	vector<Point2f> esquinas_img_actual;
 	vector<vector<Point2f>> esquinas_imgs_calibracion;
 
+	tamano_tablero = Size(13, 12);
+
 	for (int i = 1; i <= 25; i++)
 		imagenes_tablero.push_back( imread("imagenes/chessboard/Image"+to_string(i)+".tif"));
 
 	//Obtenemos las posiciones de las esquinas del tablero en las imagen donde podamos localizarlas.
 	for (int i = 0; i < 25; i++) {
-		if ( findChessboardCorners(imagenes_tablero.at(i), Size(13,12), esquinas_img_actual) ) {
+		if ( findChessboardCorners(imagenes_tablero.at(i), tamano_tablero, esquinas_img_actual) ) {
 			imagenes_calibracion.push_back(imagenes_tablero.at(i));
 			esquinas_imgs_calibracion.push_back(esquinas_img_actual);
 		}
@@ -280,10 +282,28 @@ void parte2() {
 
 	//Refinamos las coordenadas obtenidas anteriormente.
 	for (int = 0; imagenes_calibracion.size(); i++) {
-		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), Size(11,11), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), tamano_tablero, Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
 	}
 
-	
+	//Pintamos las esquinas encontradas:
+	for (int i = 0; imagenes_calibracion.size(); i++) {
+		drawChessboardCorners( imagenes_calibracion.at(i), tamano_tablero, Mat(esquinas_imgs_calibracion.at(i)), true);
+	}
+
+	vector<Point3f> esquinas_teoricas;
+
+	//Obtenemos los ptos teoricos donde ha de estar el patron que estamos buscando
+  for( int i = 0; i < tamano_tablero.height; i++)
+    for( int j = 0; j < tamano_tablero.width; j++)
+        esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
+
+	vector<vector<Point3f> > puntos_objeto(1);
+	puntos_objeto.resize(imagenes_calibracion.size(), esquinas_teoricas);
+
+
+
+
+
 
 
 }
@@ -293,5 +313,7 @@ int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	parte1();
 
+	cout << "******************\nPARTE 2: CALIBRACION\n******************" << endl;
+	parte2();
 
 }
