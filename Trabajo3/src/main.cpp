@@ -308,12 +308,115 @@ void parte2() {
 
 }
 
+/*
+Funcion que obtiene los KeyPoints de una imagen con el detector BRISK.
+@im: imagen a la que le calculamos los KeyPoints
+@umbral: parametro de umbral (thresh) para el detector BRISK a usar.
+*/
+
+vector<KeyPoint> obtenerKeyPoints (Mat im, int umbral = 30) {
+	//Creamos el detector
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
+	vector<KeyPoint> puntosDetectados;
+	
+	//Obtenemos los KP:
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+
+	return puntosDetectados;
+}
+
+
+/*
+Funcion que obtiene los descriptores de los KeyPoints localizados mediante un detector BRISK
+@im: imagen a la que le buscamos los descriptores
+@umbral: parametro de umbral para el detector BRISK a usar
+*/
+Mat obtenerDescriptoresBRISK (Mat im, int umbral = 30) {
+	//Creamos el detector:
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
+	vector<KeyPoint> puntosDetectados;
+	Mat descriptores;
+	
+	//Obtenemos los KP:
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+	
+	//Obtenemos los descriptores para estos KP:
+	ptrDetectorBRISK->compute(im, puntosDetectados, descriptores);
+	
+	return descriptores;
+}
+
+/*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada + BRISK
+@im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
+@umbral: el umbral para el detector BRISK.
+*/
+vector<DMatch> obtenerMatches (Mat im1, Mat im2, int umbral){
+	Mat descriptores1, descriptores2;
+	vector<DMatch> matches;
+	
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	BFMatcher matcher = BFMatcher(NORM_L2, true);
+	
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
+	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
+	
+	//clock_t t_inicio= clock();
+	//Calculamos los matches entre ambas imagenes:
+	matcher.match(descriptores1, descriptores2, matches);		
+	//printf("FB ha tardado: %.2fs\n",(double)(clock() - t_inicio)/CLOCKS_PER_SEC);
+	
+	return matches;
+}
+
+
+
+//Funcion donde se estructuran los pasos necesarios para el tercer punto de la practica
+void parte3() {
+	//Cargamos las imagenes
+	Mat vmort1 = imread("imagenes/vmort/Vmort1.pgm");
+	Mat vmort2 = imread("imagenes/vmort/Vmort2.pgm");
+	
+	int umbral = 97;
+	vector<KeyPoint> KPvmort1 = obtenerKeyPoints(vmort1, umbral);
+	vector<KeyPoint> KPvmort2 = obtenerKeyPoints(vmort2, umbral);
+	vector<DMatch> matches = obtenerMatches(vmort1, vmort2, umbral);
+	
+	cout << "Se han obtenido: " << KPvmort1.size() << " KP para vmort1" << endl;
+	cout << "Se han obtenido: " << KPvmort2.size() << " KP para vmort2" << endl;
+	cout << "Se han obtenido: " << matches.size() << " matches" << endl;
+	
+	//Mostramos los matches dibujandolos:
+	Mat imagenMatches;
+	drawMatches( vmort1, KPvmort1, vmort2, KPvmort2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+	
+	imshow("Matches", imagenMatches);
+	
+	//Construimos los vectores de ptos en correspondencias para el calculo de F.
+	vector<Point2f> ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2;
+		
+	for (int i = 0; i < matches.size(); i++){
+		ptosCorrespondenciasvmort1.push_back(KPvmort1[matches[i].queryIdx].pt);
+		ptosCorrespondenciasvmort2.push_back(KPvmort2[matches[i].trainIdx].pt);	
+	}
+	
+	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_RANSAC);
+	cout << "Se ha estimado la matriz fundamental." << endl;
+	
+	waitKey(0);
+	destroyAllWindows();
+
+}
+
 
 int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	//parte1();
 
-	cout << "******************\nPARTE 2: CALIBRACION\n******************" << endl;
-	parte2();
-
+	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
+	//parte2();
+	
+	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
+	parte3();
 }
