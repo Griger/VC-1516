@@ -211,14 +211,8 @@ void dibujarPtos(vector<Mat> ptos, Mat im, Scalar color) {
 			y_min = ptos.at(i).at<float>(1,0);
 	}
 
-	cout << "El rango maximo de la x es: (" << x_min << "," << x_max << ")" << endl;
-	cout << "El rango maximo de la y es: (" << y_min << "," << y_max << ")" << endl;
-
 	float longitud_x = (x_max - x_min);
 	float longitud_y = (y_max - y_min);
-
-	cout << "Longitud x: " << longitud_x << endl;
-	cout << "Longitud y: " << longitud_y << endl;
 
 	float x, y;
 	for (int i = 0; i < ptos.size(); i++) {
@@ -241,17 +235,13 @@ void parte1() {
 
 	vector<Mat> proyecciones_camara_estimada = obtenerPtosProyectados(ptos_mundo, camara_estimada);
 
-	Mat imagen_ptos_originales = Mat::zeros(500, 500, CV_32FC3);
-	Mat imagen_ptos_estimados = Mat::zeros(500, 500, CV_32FC3);
+	Mat imagen_ptos = Mat::zeros(500, 500, CV_32FC3);
+	
+	dibujarPtos(proyecciones_camara_original, imagen_ptos, Scalar(255, 0, 0));
+	dibujarPtos(proyecciones_camara_estimada, imagen_ptos, Scalar(0, 255, 255));
 
-	dibujarPtos(proyecciones_camara_original, imagen_ptos_originales, Scalar(255, 0, 0));
-	dibujarPtos(proyecciones_camara_estimada, imagen_ptos_estimados, Scalar(0, 255, 255));
-
-	//imshow("Ptos proyectados (azul) y ptos estimados (rojo)", imagen_ptos);
-	imshow("Ptos proyectados", imagen_ptos_originales);
-	imshow("Ptos estimados", imagen_ptos_estimados);
-
-
+	imshow("Ptos proyectados (azul) y ptos estimados (amarillo)", imagen_ptos);
+	
 	cout << "El error cometido en la aproximacion es: " << calcularDistanciaMatrices(camara_generada, camara_estimada) << endl;
 
 	waitKey(0);
@@ -265,11 +255,11 @@ void parte2() {
 	vector<Point2f> esquinas_img_actual;
 	vector<vector<Point2f>> esquinas_imgs_calibracion;
 
-	tamano_tablero = Size(13, 12);
+	Size tamano_tablero = Size(13, 12);
 
 	for (int i = 1; i <= 25; i++)
-		imagenes_tablero.push_back( imread("imagenes/chessboard/Image"+to_string(i)+".tif"));
-
+		imagenes_tablero.push_back( imread("imagenes/chessboard/Image"+to_string(i)+".tif", CV_8U));
+		
 	//Obtenemos las posiciones de las esquinas del tablero en las imagen donde podamos localizarlas.
 	for (int i = 0; i < 25; i++) {
 		if ( findChessboardCorners(imagenes_tablero.at(i), tamano_tablero, esquinas_img_actual) ) {
@@ -280,16 +270,25 @@ void parte2() {
 		esquinas_img_actual.clear();
 	}
 
+	cout << "Hemos podido localizar todas las esquinas en " << imagenes_calibracion.size() << " imagenes." << endl;
+	
 	//Refinamos las coordenadas obtenidas anteriormente.
-	for (int = 0; imagenes_calibracion.size(); i++) {
+	for (int i = 0; i < imagenes_calibracion.size(); i++) {
+		//cout << "Hemos refinado las esquinas encontradas en la imagen " << i+1 << "/4" << endl;
 		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), tamano_tablero, Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
 	}
-
+	
 	//Pintamos las esquinas encontradas:
-	for (int i = 0; imagenes_calibracion.size(); i++) {
+	for (int i = 0; i < imagenes_calibracion.size(); i++) {
+		cvtColor(imagenes_calibracion.at(i), imagenes_calibracion.at(i), CV_GRAY2BGR);
 		drawChessboardCorners( imagenes_calibracion.at(i), tamano_tablero, Mat(esquinas_imgs_calibracion.at(i)), true);
 	}
-
+	
+	imshow("Tablero 0", imagenes_calibracion.at(0));
+	imshow("Tablero 1", imagenes_calibracion.at(1));
+	imshow("Tablero 2", imagenes_calibracion.at(2));
+	imshow("Tablero 3", imagenes_calibracion.at(3));
+	
 	vector<Point3f> esquinas_teoricas;
 
 	//Obtenemos los ptos teoricos donde ha de estar el patron que estamos buscando
@@ -303,7 +302,8 @@ void parte2() {
 
 
 
-
+	waitKey(0);
+	destroyAllWindows();
 
 
 }
@@ -311,7 +311,7 @@ void parte2() {
 
 int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
-	parte1();
+	//parte1();
 
 	cout << "******************\nPARTE 2: CALIBRACION\n******************" << endl;
 	parte2();
