@@ -388,10 +388,10 @@ void parte3() {
 	cout << "Se han obtenido: " << matches.size() << " matches" << endl;
 	
 	//Mostramos los matches dibujandolos:
-	Mat imagenMatches;
+	/*Mat imagenMatches;
 	drawMatches( vmort1, KPvmort1, vmort2, KPvmort2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 	
-	imshow("Matches", imagenMatches);
+	imshow("Matches", imagenMatches);*/
 	
 	//Construimos los vectores de ptos en correspondencias para el calculo de F.
 	vector<Point2f> ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2;
@@ -401,8 +401,33 @@ void parte3() {
 		ptosCorrespondenciasvmort2.push_back(KPvmort2[matches[i].trainIdx].pt);	
 	}
 	
-	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_RANSAC);
-	cout << "Se ha estimado la matriz fundamental." << endl;
+	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_RANSAC, 0.2, 0.99);
+	cout << "Se ha estimado la matriz fundamental y es:" << endl;
+	mostrarMatriz(F);
+	
+	vector<Vec3f> lineas_para_vmort1, lineas_para_vmort2;
+	computeCorrespondEpilines(ptosCorrespondenciasvmort1, 1, F, lineas_para_vmort1);
+	computeCorrespondEpilines(ptosCorrespondenciasvmort2, 2, F, lineas_para_vmort2);
+	
+	Vec3f l;
+	double c = vmort2.cols;
+	
+	for (int i = 0; i < 200; i++) {
+		l = lineas_para_vmort1.at(i);
+		line(vmort2, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(i+30,255-i,155));		
+	}
+	
+	c = vmort1.cols;
+	
+	for (int i = 0; i < 200; i++) {
+		l = lineas_para_vmort2.at(i);
+		if (i == 0)
+			cout << l[0] << "," << l[1] << "," << l[2] << endl;
+		line(vmort1, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(255,0,0));		
+	}
+	
+	imshow("Vmort 1", vmort1);	
+	imshow("Vmort 2", vmort2);
 	
 	waitKey(0);
 	destroyAllWindows();
