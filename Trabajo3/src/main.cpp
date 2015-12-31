@@ -383,16 +383,6 @@ void parte3() {
 	vector<KeyPoint> KPvmort2 = obtenerKeyPoints(vmort2, umbral);
 	vector<DMatch> matches = obtenerMatches(vmort1, vmort2, umbral);
 	
-	cout << "Se han obtenido: " << KPvmort1.size() << " KP para vmort1" << endl;
-	cout << "Se han obtenido: " << KPvmort2.size() << " KP para vmort2" << endl;
-	cout << "Se han obtenido: " << matches.size() << " matches" << endl;
-	
-	//Mostramos los matches dibujandolos:
-	/*Mat imagenMatches;
-	drawMatches( vmort1, KPvmort1, vmort2, KPvmort2, matches, imagenMatches, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-	
-	imshow("Matches", imagenMatches);*/
-	
 	//Construimos los vectores de ptos en correspondencias para el calculo de F.
 	vector<Point2f> ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2;
 		
@@ -438,6 +428,7 @@ void parte3() {
 		l = lineas_para_vmort1.at(i);
 		p = ptosCorrespondenciasvmort2.at(i);
 		error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+		
 		l = lineas_para_vmort2.at(i);
 		p = ptosCorrespondenciasvmort1.at(i);
 		error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
