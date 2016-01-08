@@ -378,10 +378,13 @@ void parte3() {
 	Mat vmort1 = imread("imagenes/vmort/Vmort1.pgm");
 	Mat vmort2 = imread("imagenes/vmort/Vmort2.pgm");
 	
-	int umbral = 97;
+	int umbral = 50;
 	vector<KeyPoint> KPvmort1 = obtenerKeyPoints(vmort1, umbral);
 	vector<KeyPoint> KPvmort2 = obtenerKeyPoints(vmort2, umbral);
 	vector<DMatch> matches = obtenerMatches(vmort1, vmort2, umbral);
+	
+	cout << "Hemos obtenido: " << KPvmort1.size() << " y " << KPvmort2.size() << "Key Points" << endl;
+	cout << "Y de aqui hemos obtenido: " << matches.size() << "parejas en correspondencias. " << endl;
 	
 	//Construimos los vectores de ptos en correspondencias para el calculo de F.
 	vector<Point2f> ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2;
@@ -392,29 +395,42 @@ void parte3() {
 	}
 	
 	//Calculamos la matriz fundamental:
-	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_RANSAC, 0.002);
+	vector<uchar> buenos_malos;
+	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_8POINT+CV_FM_RANSAC,1,0.99, buenos_malos);
 	cout << "Se ha estimado la matriz fundamental y es:" << endl;
 	mostrarMatriz(F);
 	
-	//Obtenemos las lineas epipolares
+	int numero_descartes = 0;
+	
+	for (int i = 0; i < buenos_malos.size(); i++)
+		if (buenos_malos.at(i) == 0)
+			numero_descartes++;
+		
+	cout << "RANSAC ha descartado: " << numero_descartes << " parejas en correspondencias." << endl;
+	
 	vector<Vec3f> lineas_para_vmort1, lineas_para_vmort2;
 	computeCorrespondEpilines(ptosCorrespondenciasvmort1, 1, F, lineas_para_vmort1);
 	computeCorrespondEpilines(ptosCorrespondenciasvmort2, 2, F, lineas_para_vmort2);
 	
+	cout << "Se han obtenido: " << lineas_para_vmort1.size() << "lineas epipolares" << endl;
 	Vec3f l;
 	double c = vmort2.cols;
 	
 	//Dibujamos las lineas epipolares evaluandolas en x = 0 y x = num_columnas_imagen
-	for (int i = 0; i < 200; i++) {
-		l = lineas_para_vmort1.at(i);
-		line(vmort2, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));		
+	for (int i = 0; i < lineas_para_vmort1.size(); i++) {
+		if (buenos_malos.at(i) == 1) {
+			l = lineas_para_vmort1.at(i);
+			line(vmort2, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));
+		}	
 	}
 	
 	c = vmort1.cols;
 	
-	for (int i = 0; i < 200; i++) {
-		l = lineas_para_vmort2.at(i);
-		line(vmort1, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));		
+	for (int i = 0; i < lineas_para_vmort2.size(); i++) {
+		if (buenos_malos.at(i) == 1) {
+			l = lineas_para_vmort2.at(i);
+			line(vmort1, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));
+		}	
 	}
 	
 	imshow("Epipolares de los ptos de Vmort2 sobre Vmort1", vmort1);	
@@ -424,18 +440,25 @@ void parte3() {
 	//Calculamos el error como las distancia promedio de las lineas epipolares a sus puntos de soporte
 	double error1 = 0;
 	double error2 = 0;
+	int dem = 0;
 	for (int i = 0; i < lineas_para_vmort1.size(); i++) {
-		l = lineas_para_vmort1.at(i);
-		p = ptosCorrespondenciasvmort2.at(i);
-		error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+		if (buenos_malos.at(i) == 1) {
+			l = lineas_para_vmort1.at(i);
+			p = ptosCorrespondenciasvmort2.at(i);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
 		
-		l = lineas_para_vmort2.at(i);
-		p = ptosCorrespondenciasvmort1.at(i);
-		error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+			l = lineas_para_vmort2.at(i);
+			p = ptosCorrespondenciasvmort1.at(i);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+			
+			dem++;
+		}
 	}
 	
-	error1 = error1 / lineas_para_vmort1.size();
-	error2 = error2 / lineas_para_vmort2.size();
+	error1 = error1 / dem;
+	error2 = error2 / dem;
 	
 	cout << "El error promedio cometido para las lineas de vmort1 es: " << error1 << endl;
 	cout << "El error promedio cometido para las lineas de vmort2 es: " << error2 << endl;	
