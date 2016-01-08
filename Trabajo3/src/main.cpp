@@ -378,7 +378,7 @@ void parte3() {
 	Mat vmort1 = imread("imagenes/vmort/Vmort1.pgm");
 	Mat vmort2 = imread("imagenes/vmort/Vmort2.pgm");
 	
-	int umbral = 50;
+	int umbral = 97;
 	vector<KeyPoint> KPvmort1 = obtenerKeyPoints(vmort1, umbral);
 	vector<KeyPoint> KPvmort2 = obtenerKeyPoints(vmort2, umbral);
 	vector<DMatch> matches = obtenerMatches(vmort1, vmort2, umbral);
@@ -395,7 +395,7 @@ void parte3() {
 	}
 	
 	//Calculamos la matriz fundamental:
-	vector<uchar> buenos_malos;
+	vector<unsigned char> buenos_malos;
 	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_8POINT+CV_FM_RANSAC,1,0.99, buenos_malos);
 	cout << "Se ha estimado la matriz fundamental y es:" << endl;
 	mostrarMatriz(F);
