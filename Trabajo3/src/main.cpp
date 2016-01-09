@@ -495,7 +495,7 @@ void parte4() {
 	Mat im1 = imread("imagenes/reconstruccion/rdimage.001.ppm");
 	Mat im4 = imread("imagenes/reconstruccion/rdimage.004.ppm");
 	
-	Mat F = estimarF(im0, im1, 97);
+	Mat F = estimarF(im0, im1, 50);
 	
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
@@ -517,13 +517,15 @@ void parte4() {
 	//Estimamos la matriz esencial:
 	Mat E1 = K.t() * F;
 	Mat E = E1 * K;
+	Mat menos_E = -E;
 	
-	cout << "El tipo de la E es: " << E.type() << endl;
-	cout << "Hemos estimado la matriz esencial y es: " << endl;
+	cout << "Hemos estimado E: " << endl;
 	mostrarMatriz(E);
+	cout << "Y la -E es: " << endl;
+	mostrarMatriz(menos_E);
 	
 	cout << "E traspuesta por E: " << endl;
-	Mat EtE = E.t()*E;
+	Mat EtE = E*E.t();
 	mostrarMatriz(EtE);
 	
 	double traza = 0.0;
@@ -537,12 +539,19 @@ void parte4() {
 	cout << "El dividendo es: " << dividendo << endl;
 	Mat EtE_norm = EtE / dividendo;
 	
-	cout << "La E normalizada es: " << endl;
+	cout << "La E por Et normalizada es: " << endl;
 	mostrarMatriz(EtE_norm);
 	
-	cout << "Primera componente de EtE normalizada: " << EtE.at<double>(0,0) / dividendo << endl;
-	cout << "La segunda: " << EtE.at<double>(0,1) / dividendo << endl;
-	cout << "La tercera: " << EtE.at<double>(0,2) / dividendo << endl;
+	cout << "Primera componente de EtE normalizada: " << EtE_norm.at<double>(0,0)<< endl;
+	cout << "La segunda: " << EtE_norm.at<double>(0,1) << endl;
+	cout << "La tercera: " << EtE_norm.at<double>(0,2) << endl;
+	
+	double x = sqrt(1-double(EtE_norm.at<double>(0,0)));
+	double y = - EtE_norm.at<double>(1,0) / x;
+	double z = -EtE_norm.at<double>(2,0) / x;
+	
+	cout << "Componentes de T gorro:  " << x << "  " << y << "  " << z << endl;
+	cout << "Norma de T gorro: " << sqrt(x*x+y*y+z*z) << endl;
 	
 	
 	
