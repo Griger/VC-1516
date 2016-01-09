@@ -11,7 +11,7 @@ void mostrarMatriz(Mat m) {
 
 	for (int i = 0; i < f; i++){
 		for (int j = 0; j < c; j++)
-			cout << m.at<float>(i,j) << " ";
+			cout << m.at<double>(i,j) << " ";
 		cout << endl;
 	}
 
@@ -370,7 +370,26 @@ vector<DMatch> obtenerMatches (Mat im1, Mat im2, int umbral){
 	return matches;
 }
 
-
+Mat estimarF (Mat im1, Mat im2, int umbral) {
+	vector<KeyPoint> KPim1 = obtenerKeyPoints(im1, umbral);
+	vector<KeyPoint> KPim2 = obtenerKeyPoints(im2, umbral);
+	vector<DMatch> matches = obtenerMatches(im1, im2, umbral);
+	
+	//Construimos los vectores de ptos en correspondencias para el calculo de F
+	vector<Point2f> ptos_corresp_1, ptos_corresp_2;
+	
+	for (int i = 0; i < matches.size(); i++) {
+		ptos_corresp_1.push_back(KPim1[matches[i].queryIdx].pt);
+		ptos_corresp_2.push_back(KPim2[matches[i].trainIdx].pt);
+	}
+	
+	//Calculamos la matriz fundamental:
+	vector <unsigned char> buenos_malos; //vector donde se marca que parejas han sido rechazadas por RANSAC
+	Mat F = findFundamentalMat(ptos_corresp_1, ptos_corresp_2, CV_FM_8POINT + CV_FM_RANSAC, 1, 0.99, buenos_malos);
+	
+	return F;
+}
+	
 
 //Funcion donde se estructuran los pasos necesarios para el tercer punto de la practica
 void parte3() {
@@ -469,6 +488,72 @@ void parte3() {
 
 }
 
+//Funcion donde se estructuran los pasos necesarios para el cuarto punto de la practica
+void parte4() {
+	//Cargamos las imagenes
+	Mat im0 = imread("imagenes/reconstruccion/rdimage.000.ppm");
+	Mat im1 = imread("imagenes/reconstruccion/rdimage.001.ppm");
+	Mat im4 = imread("imagenes/reconstruccion/rdimage.004.ppm");
+	
+	Mat F = estimarF(im0, im1, 97);
+	
+	cout << "Se ha calculado la matriz fundamental y es: " << endl;
+	mostrarMatriz(F);
+	//cout << "El tipo de la matriz F es: " << F.type() << endl;
+	Mat K = Mat(3,3,CV_64F);
+	K.at<double>(0,0) = 1839.6300000000001091;
+	K.at<double>(0,1) = 0.0;
+	K.at<double>(0,2) = 1024.2000000000000455;
+	K.at<double>(1,0) = 0.0;
+	K.at<double>(1,1) = 1848.0699999999999363;
+	K.at<double>(1,2) = 686.5180000000000291;
+	K.at<double>(2,0) = 0.0;
+	K.at<double>(2,1) = 0.0;
+	K.at<double>(2,2) = 1.0;
+	
+	cout << "La matriz de parametros intrinsecos es: " << endl;
+	mostrarMatriz(K);
+	
+	//Estimamos la matriz esencial:
+	Mat E1 = K.t() * F;
+	Mat E = E1 * K;
+	
+	cout << "El tipo de la E es: " << E.type() << endl;
+	cout << "Hemos estimado la matriz esencial y es: " << endl;
+	mostrarMatriz(E);
+	
+	cout << "E traspuesta por E: " << endl;
+	Mat EtE = E.t()*E;
+	mostrarMatriz(EtE);
+	
+	double traza = 0.0;
+	
+	for (int i = 0; i < 3; i++)
+		traza += EtE.at<double>(i,i);
+		
+	cout << "Mi traza de EtE es: " << traza << endl;
+	
+	double dividendo = traza/2;
+	cout << "El dividendo es: " << dividendo << endl;
+	Mat EtE_norm = EtE / dividendo;
+	
+	cout << "La E normalizada es: " << endl;
+	mostrarMatriz(EtE_norm);
+	
+	cout << "Primera componente de EtE normalizada: " << EtE.at<double>(0,0) / dividendo << endl;
+	cout << "La segunda: " << EtE.at<double>(0,1) / dividendo << endl;
+	cout << "La tercera: " << EtE.at<double>(0,2) / dividendo << endl;
+	
+	
+	
+	waitKey(0);
+	destroyAllWindows();
+
+
+
+
+}
+
 
 int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
@@ -478,5 +563,8 @@ int main() {
 	//parte2();
 	
 	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
-	parte3();
+	//parte3();
+	
+	cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
+	parte4();
 }
