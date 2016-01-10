@@ -387,6 +387,39 @@ Mat estimarF (Mat im1, Mat im2, int umbral) {
 	vector <unsigned char> buenos_malos; //vector donde se marca que parejas han sido rechazadas por RANSAC
 	Mat F = findFundamentalMat(ptos_corresp_1, ptos_corresp_2, CV_FM_8POINT + CV_FM_RANSAC, 1, 0.99, buenos_malos);
 	
+	vector<Vec3f> lineas_para_1, lineas_para_2;
+	computeCorrespondEpilines(ptos_corresp_1, 1, F, lineas_para_1);
+	computeCorrespondEpilines(ptos_corresp_2, 2, F, lineas_para_2);
+	
+	double error1 = 0;
+	double error2 = 0;
+	int dem = 0;
+	Vec3f l;
+	Point2f p;
+	for (int i = 0; i < lineas_para_1.size(); i++) {
+		if (buenos_malos.at(i) == 1) {
+			l = lineas_para_1.at(i);
+			p = ptos_corresp_2.at(i);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+		
+			l = lineas_para_2.at(i);
+			p = ptos_corresp_1.at(i);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+			
+			dem++;
+		}
+	}
+	
+	error1 = error1 / dem;
+	error2 = error2 / dem;
+	
+	cout << "El error promedio cometido para las lineas de 1 es: " << error1 << endl;
+	cout << "El error promedio cometido para las lineas de 2 es: " << error2 << endl;	
+	
+	
+	
 	return F;
 }
 	
@@ -494,9 +527,9 @@ void parte4() {
 	Mat im0 = imread("imagenes/reconstruccion/rdimage.000.ppm");
 	Mat im1 = imread("imagenes/reconstruccion/rdimage.001.ppm");
 	Mat im4 = imread("imagenes/reconstruccion/rdimage.004.ppm");
-	
-	Mat F = estimarF(im0, im1, 50);
-	
+
+	Mat F = estimarF(im0, im4, 50);
+
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
 	//cout << "El tipo de la matriz F es: " << F.type() << endl;
@@ -510,51 +543,59 @@ void parte4() {
 	K.at<double>(2,0) = 0.0;
 	K.at<double>(2,1) = 0.0;
 	K.at<double>(2,2) = 1.0;
-	
+
 	cout << "La matriz de parametros intrinsecos es: " << endl;
 	mostrarMatriz(K);
-	
+
 	//Estimamos la matriz esencial:
 	Mat E1 = K.t() * F;
 	Mat E = E1 * K;
 	Mat menos_E = -E;
-	
+
 	cout << "Hemos estimado E: " << endl;
 	mostrarMatriz(E);
 	cout << "Y la -E es: " << endl;
 	mostrarMatriz(menos_E);
-	
-	cout << "E traspuesta por E: " << endl;
-	Mat EtE = E*E.t();
-	mostrarMatriz(EtE);
-	
+
+	cout << "E por Etraspuesta: " << endl;
+	Mat EEt = E*E.t();
+	mostrarMatriz(EEt);
+
 	double traza = 0.0;
-	
+
 	for (int i = 0; i < 3; i++)
-		traza += EtE.at<double>(i,i);
-		
-	cout << "Mi traza de EtE es: " << traza << endl;
-	
+		traza += EEt.at<double>(i,i);
+
+	cout << "Traza de EEtrapuesta: " << traza << endl;
+
 	double dividendo = traza/2;
-	cout << "El dividendo es: " << dividendo << endl;
-	Mat EtE_norm = EtE / dividendo;
-	
-	cout << "La E por Et normalizada es: " << endl;
-	mostrarMatriz(EtE_norm);
-	
-	cout << "Primera componente de EtE normalizada: " << EtE_norm.at<double>(0,0)<< endl;
-	cout << "La segunda: " << EtE_norm.at<double>(0,1) << endl;
-	cout << "La tercera: " << EtE_norm.at<double>(0,2) << endl;
-	
-	double x = sqrt(1-double(EtE_norm.at<double>(0,0)));
-	double y = - EtE_norm.at<double>(1,0) / x;
-	double z = -EtE_norm.at<double>(2,0) / x;
-	
-	cout << "Componentes de T gorro:  " << x << "  " << y << "  " << z << endl;
-	cout << "Norma de T gorro: " << sqrt(x*x+y*y+z*z) << endl;
-	
-	
-	
+	Mat EEt_norm = EEt / dividendo;
+
+	cout << "EEtrapuesta normalizada: " << endl;
+	mostrarMatriz(EEt_norm);
+
+	double T[3];
+	int fila_donde_despejar;
+
+	double elem = EEt_norm.at<double>(0,0);
+	for (int i = 0; i < 3; i++)
+		if (EEt_norm.at<double>(i,i) <= elem) {
+			fila_donde_despejar = i;
+			elem = EEt_norm.at<double>(i,i);
+		}
+
+	T[fila_donde_despejar] = sqrt(1-elem);
+	T[(fila_donde_despejar+1)%3] = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+1)%3) / T[fila_donde_despejar];
+	T[(fila_donde_despejar+2)%3] = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+2)%3) / T[fila_donde_despejar];
+
+	cout << "T_x: " << T[0] << endl;
+	cout << "T_y: " << T[1] << endl;
+	cout << "T_z: " << T[2] << endl;
+
+	cout << "Norma de T gorro: " << sqrt(T[0]*T[0]+T[1]*T[1]+T[2]*T[2]) << endl;
+
+
+
 	waitKey(0);
 	destroyAllWindows();
 
@@ -565,13 +606,13 @@ void parte4() {
 
 
 int main() {
-	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
+	//cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	//parte1();
 
-	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
+	//cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
 	//parte2();
 	
-	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
+	//cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
 	//parte3();
 	
 	cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
