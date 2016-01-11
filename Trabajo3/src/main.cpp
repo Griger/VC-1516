@@ -370,7 +370,7 @@ vector<DMatch> obtenerMatches (Mat im1, Mat im2, int umbral){
 	return matches;
 }
 
-Mat estimarF (Mat im1, Mat im2, int umbral) {
+Mat estimarF (Mat im1, Mat im2, int umbral, vector<Point2f> &corresp_1, vector<Point2f> &corresp_2) {
 	vector<KeyPoint> KPim1 = obtenerKeyPoints(im1, umbral);
 	vector<KeyPoint> KPim2 = obtenerKeyPoints(im2, umbral);
 	vector<DMatch> matches = obtenerMatches(im1, im2, umbral);
@@ -400,11 +400,13 @@ Mat estimarF (Mat im1, Mat im2, int umbral) {
 		if (buenos_malos.at(i) == 1) {
 			l = lineas_para_1.at(i);
 			p = ptos_corresp_2.at(i);
+			corresp_2.push_back(p);
 			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
 			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
 		
 			l = lineas_para_2.at(i);
 			p = ptos_corresp_1.at(i);
+			corresp_1.push_back(p);
 			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
 			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
 			
@@ -527,9 +529,12 @@ void parte4() {
 	Mat im0 = imread("imagenes/reconstruccion/rdimage.000.ppm");
 	Mat im1 = imread("imagenes/reconstruccion/rdimage.001.ppm");
 	Mat im4 = imread("imagenes/reconstruccion/rdimage.004.ppm");
+	
+	//Recuperamos los puntos en correspondencias que se han usado en la estimacion de F
+	vector<Point2f> corresp_1, corresp_2;
 
-	Mat F = estimarF(im0, im4, 50);
-
+	Mat F = estimarF(im0, im1, 50, corresp_1, corresp_2);
+	
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
 	//cout << "El tipo de la matriz F es: " << F.type() << endl;
@@ -589,22 +594,12 @@ void parte4() {
 	menos_T.at<double>(0,1) = -T.at<double>(0,1);
 	menos_T.at<double>(0,2) = -T.at<double>(0,2);
 	
-	cout << "El T que vamos a usar: " << endl;
-	mostrarMatriz(T);
-	cout << endl;
-	cout << "La E que vamos a usar: " << endl;
-	mostrarMatriz(E_norm);
-	
 	Mat menos_E_norm = -E_norm;
 	//mostrarMatriz(menos_T);
 	Mat R_E_T = Mat(3,3,CV_64F);
 	Mat R_E_menosT = Mat(3,3,CV_64F);
 	Mat R_menosE_T = Mat(3,3,CV_64F);
 	Mat R_menosE_menosT = Mat(3,3,CV_64F);
-	
-	mostrarMatriz(E_norm.row(0).cross(T));
-	mostrarMatriz(E_norm.row(1).cross(T));
-	mostrarMatriz(E_norm.row(2).cross(T));	
 	
 	(E_norm.row(0).cross(T)).copyTo(R_E_T.row(0));
 	(E_norm.row(1).cross(T)).copyTo(R_E_T.row(1));
@@ -633,10 +628,50 @@ void parte4() {
 	
 	cout << "La rotacion para -E y -T:" << endl;
 	mostrarMatriz(R_menosE_menosT);
+	
+	//Obtenemos la distancia focal en pixels de la matriz de calibracion K:
+	double f = K.at<double>(0,0);
+	
+	int num_corresp = corresp_1.size();
+	double Zis[num_corresp];
+	double dot1, dot2, Zi, Zd;
+	Mat pi = Mat(1,3,CV_64F);
+	Mat Pi = Mat(1,3,CV_64F);
+	pi.at<double>(0,2) = 1.0;
+	/*Point2f p = corresp_1.at(0);
+	
+	cout << "El p es (" << p.x << "," << p.y << ")" << endl;
+	pi.at<double>(0,0) = corresp_1.at(0).x;
+	pi.at<double>(0,1) = corresp_1.at(0).y;
+	
+	cout << "pi" << endl;
+	mostrarMatriz(pi);*/
+	//cout << "El T es: "; mostrarMatriz(T);
+	//cout << "La f es: " << f << endl;
+	Mat R = R_E_menosT;
+	int contador = 0;
+	for (int i = 0; i < corresp_1.size(); i++) {
+		pi.at<double>(0,0) = corresp_1.at(i).x;
+		pi.at<double>(0,1) = corresp_1.at(i).y;
+		//cout << "xd: " << corresp_2.at(i).x << endl;
+		//mostrarMatriz(f*R_E_T.row(0) - corresp_2.at(i).x*R_E_T.row(2));
+		dot1 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(menos_T);
+		//cout << "El producto escalar vale: " << dot << endl;
+		dot2 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(pi);
+		Zi = f*dot1/dot2;
 		
-	//cout << "Norma de T gorro: " << sqrt(T[0]*T[0]+T[1]*T[1]+T[2]*T[2]) << endl;
-
-
+		Pi = (Zi/f)*pi;
+		
+		Zd = R.row(2).dot(Pi-menos_T);
+		
+		if (Zi < 0 || Zd < 0)
+			contador++;
+		
+	}
+	
+	cout << "Hay " << contador << " Zs negativos de" << corresp_1.size() << " posibles." << endl;
+		
+		
 
 	waitKey(0);
 	destroyAllWindows();
