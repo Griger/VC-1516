@@ -550,31 +550,28 @@ void parte4() {
 	//Estimamos la matriz esencial:
 	Mat E1 = K.t() * F;
 	Mat E = E1 * K;
-	Mat menos_E = -E;
-
+	
 	cout << "Hemos estimado E: " << endl;
 	mostrarMatriz(E);
-	cout << "Y la -E es: " << endl;
-	mostrarMatriz(menos_E);
-
-	cout << "E por Etraspuesta: " << endl;
+	
 	Mat EEt = E*E.t();
-	mostrarMatriz(EEt);
-
+	
 	double traza = 0.0;
-
 	for (int i = 0; i < 3; i++)
 		traza += EEt.at<double>(i,i);
 
 	cout << "Traza de EEtrapuesta: " << traza << endl;
+	
+	Mat E_norm = E / sqrt(traza/2);
 
-	double dividendo = traza/2;
-	Mat EEt_norm = EEt / dividendo;
+	Mat EEt_norm = E_norm * E_norm.t();
+	
 
 	cout << "EEtrapuesta normalizada: " << endl;
 	mostrarMatriz(EEt_norm);
-
-	double T[3];
+	
+	Mat T = Mat(1,3, CV_64F);
+	Mat menos_T = Mat(1,3, CV_64F);
 	int fila_donde_despejar;
 
 	double elem = EEt_norm.at<double>(0,0);
@@ -584,15 +581,60 @@ void parte4() {
 			elem = EEt_norm.at<double>(i,i);
 		}
 
-	T[fila_donde_despejar] = sqrt(1-elem);
-	T[(fila_donde_despejar+1)%3] = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+1)%3) / T[fila_donde_despejar];
-	T[(fila_donde_despejar+2)%3] = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+2)%3) / T[fila_donde_despejar];
-
-	cout << "T_x: " << T[0] << endl;
-	cout << "T_y: " << T[1] << endl;
-	cout << "T_z: " << T[2] << endl;
-
-	cout << "Norma de T gorro: " << sqrt(T[0]*T[0]+T[1]*T[1]+T[2]*T[2]) << endl;
+	T.at<double>(0, fila_donde_despejar) = sqrt(1-elem);
+	T.at<double>(0,(fila_donde_despejar+1)%3) = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+1)%3) / sqrt(1-elem);
+	T.at<double>(0,(fila_donde_despejar+2)%3) = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+2)%3) / sqrt(1-elem);
+	
+	menos_T.at<double>(0,0) = -T.at<double>(0,0);
+	menos_T.at<double>(0,1) = -T.at<double>(0,1);
+	menos_T.at<double>(0,2) = -T.at<double>(0,2);
+	
+	cout << "El T que vamos a usar: " << endl;
+	mostrarMatriz(T);
+	cout << endl;
+	cout << "La E que vamos a usar: " << endl;
+	mostrarMatriz(E_norm);
+	
+	Mat menos_E_norm = -E_norm;
+	//mostrarMatriz(menos_T);
+	Mat R_E_T = Mat(3,3,CV_64F);
+	Mat R_E_menosT = Mat(3,3,CV_64F);
+	Mat R_menosE_T = Mat(3,3,CV_64F);
+	Mat R_menosE_menosT = Mat(3,3,CV_64F);
+	
+	mostrarMatriz(E_norm.row(0).cross(T));
+	mostrarMatriz(E_norm.row(1).cross(T));
+	mostrarMatriz(E_norm.row(2).cross(T));	
+	
+	(E_norm.row(0).cross(T)).copyTo(R_E_T.row(0));
+	(E_norm.row(1).cross(T)).copyTo(R_E_T.row(1));
+	(E_norm.row(2).cross(T)).copyTo(R_E_T.row(2));
+	
+	(E_norm.row(0).cross(menos_T)).copyTo(R_E_menosT.row(0));
+	(E_norm.row(1).cross(menos_T)).copyTo(R_E_menosT.row(1));
+	(E_norm.row(2).cross(menos_T)).copyTo(R_E_menosT.row(2));
+	
+	(menos_E_norm.row(0).cross(T)).copyTo(R_menosE_T.row(0));
+	(menos_E_norm.row(1).cross(T)).copyTo(R_menosE_T.row(1));
+	(menos_E_norm.row(2).cross(T)).copyTo(R_menosE_T.row(2));
+	
+	(menos_E_norm.row(0).cross(menos_T)).copyTo(R_menosE_menosT.row(0));
+	(menos_E_norm.row(1).cross(menos_T)).copyTo(R_menosE_menosT.row(1));
+	(menos_E_norm.row(2).cross(menos_T)).copyTo(R_menosE_menosT.row(2));
+	
+	cout << "La rotacion para E y T:" << endl;
+	mostrarMatriz(R_E_T);
+	
+	cout << "La rotacion para E y -T:" << endl;
+	mostrarMatriz(R_E_menosT);
+	
+	cout << "La rotacion para -E y T:" << endl;
+	mostrarMatriz(R_menosE_T);
+	
+	cout << "La rotacion para -E y -T:" << endl;
+	mostrarMatriz(R_menosE_menosT);
+		
+	//cout << "Norma de T gorro: " << sqrt(T[0]*T[0]+T[1]*T[1]+T[2]*T[2]) << endl;
 
 
 
