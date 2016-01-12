@@ -284,10 +284,10 @@ void parte2() {
 		drawChessboardCorners( imagenes_calibracion.at(i), tamano_tablero, Mat(esquinas_imgs_calibracion.at(i)), true);
 	}
 	
-	imshow("Tablero 0", imagenes_calibracion.at(0));
+	/*imshow("Tablero 0", imagenes_calibracion.at(0));
 	imshow("Tablero 1", imagenes_calibracion.at(1));
 	imshow("Tablero 2", imagenes_calibracion.at(2));
-	imshow("Tablero 3", imagenes_calibracion.at(3));
+	imshow("Tablero 3", imagenes_calibracion.at(3));*/
 	
 	vector<Point3f> esquinas_teoricas;
 
@@ -296,12 +296,51 @@ void parte2() {
     for( int j = 0; j < tamano_tablero.width; j++)
         esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
 
-	vector<vector<Point3f> > puntos_objeto(1);
+	vector<vector<Point3f> > puntos_objeto;
 	puntos_objeto.resize(imagenes_calibracion.size(), esquinas_teoricas);
+	
+	double error1, error2, error3;
+	
+	Mat K = Mat::eye(3,3,CV_64F);
+	Mat coef_distorsion = Mat::zeros(8, 1, CV_64F);
+	vector<Mat> rvecs, tvecs;
+	
+	error1 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
+	
+	cout << "Los parametros de distorsion calculados son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+		
+	cout << endl;
+	cout << "El error con el que se ha calibrado la camara es: " << error1 << endl;
 
+	error2 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST);
+	
+	cout << "Los parametros de distorsion calculados son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+	cout << endl;
 
-
-
+	cout << "El error al introducir distorsion radial: " << error2 << endl;
+	
+	error3 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
+	
+	cout << "Los parametros de distorsion calculados son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+		
+	cout << endl;
+	cout << "El error al introducir distorsion tangencial es: " << error3 << endl;
+	
+	error1 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_RATIONAL_MODEL);
+	
+	cout << "Los parametros de distorsion calculados son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+	
+	cout << endl;	
+	cout << "Calculando todos los coeficientes de distorsion: " << error1 << endl;
+	
 	waitKey(0);
 	destroyAllWindows();
 
@@ -533,7 +572,7 @@ void parte4() {
 	//Recuperamos los puntos en correspondencias que se han usado en la estimacion de F
 	vector<Point2f> corresp_1, corresp_2;
 
-	Mat F = estimarF(im0, im1, 50, corresp_1, corresp_2);
+	Mat F = estimarF(im1, im4, 50, corresp_1, corresp_2);
 	
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
@@ -601,21 +640,61 @@ void parte4() {
 	Mat R_menosE_T = Mat(3,3,CV_64F);
 	Mat R_menosE_menosT = Mat(3,3,CV_64F);
 	
-	(E_norm.row(0).cross(T)).copyTo(R_E_T.row(0));
-	(E_norm.row(1).cross(T)).copyTo(R_E_T.row(1));
-	(E_norm.row(2).cross(T)).copyTo(R_E_T.row(2));
+	Mat w0 = Mat(1,3, CV_64F);
+	Mat w1 = Mat(1,3, CV_64F);
+	Mat w2 = Mat(1,3, CV_64F);
 	
-	(E_norm.row(0).cross(menos_T)).copyTo(R_E_menosT.row(0));
-	(E_norm.row(1).cross(menos_T)).copyTo(R_E_menosT.row(1));
-	(E_norm.row(2).cross(menos_T)).copyTo(R_E_menosT.row(2));
+	Mat R0 = Mat(1,3, CV_64F);
+	Mat R1 = Mat(1,3, CV_64F);
+	Mat R2 = Mat(1,3, CV_64F);
 	
-	(menos_E_norm.row(0).cross(T)).copyTo(R_menosE_T.row(0));
-	(menos_E_norm.row(1).cross(T)).copyTo(R_menosE_T.row(1));
-	(menos_E_norm.row(2).cross(T)).copyTo(R_menosE_T.row(2));
+	(E_norm.row(0).cross(T)).copyTo(w0);
+	(E_norm.row(1).cross(T)).copyTo(w1);
+	(E_norm.row(2).cross(T)).copyTo(w2);
 	
-	(menos_E_norm.row(0).cross(menos_T)).copyTo(R_menosE_menosT.row(0));
-	(menos_E_norm.row(1).cross(menos_T)).copyTo(R_menosE_menosT.row(1));
-	(menos_E_norm.row(2).cross(menos_T)).copyTo(R_menosE_menosT.row(2));
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_E_T.row(0));
+	(R1).copyTo(R_E_T.row(1));
+	(R2).copyTo(R_E_T.row(2));
+	
+	(E_norm.row(0).cross(menos_T)).copyTo(w0);
+	(E_norm.row(1).cross(menos_T)).copyTo(w1);
+	(E_norm.row(2).cross(menos_T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_E_menosT.row(0));
+	(R1).copyTo(R_E_menosT.row(1));
+	(R2).copyTo(R_E_menosT.row(2));
+	
+	(menos_E_norm.row(0).cross(T)).copyTo(w0);
+	(menos_E_norm.row(1).cross(T)).copyTo(w1);
+	(menos_E_norm.row(2).cross(T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_menosE_T.row(0));
+	(R1).copyTo(R_menosE_T.row(1));
+	(R2).copyTo(R_menosE_T.row(2));
+	
+	(menos_E_norm.row(0).cross(menos_T)).copyTo(w0);
+	(menos_E_norm.row(1).cross(menos_T)).copyTo(w1);
+	(menos_E_norm.row(2).cross(menos_T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_menosE_menosT.row(0));
+	(R1).copyTo(R_menosE_menosT.row(1));
+	(R2).copyTo(R_menosE_menosT.row(2));
 	
 	cout << "La rotacion para E y T:" << endl;
 	mostrarMatriz(R_E_T);
@@ -633,7 +712,6 @@ void parte4() {
 	double f = K.at<double>(0,0);
 	
 	int num_corresp = corresp_1.size();
-	double Zis[num_corresp];
 	double dot1, dot2, Zi, Zd;
 	Mat pi = Mat(1,3,CV_64F);
 	Mat Pi = Mat(1,3,CV_64F);
@@ -659,7 +737,7 @@ void parte4() {
 		//cout << "El producto escalar vale: " << dot << endl;
 		dot2 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(pi);
 		Zi = f*dot1/dot2;
-		
+		 
 		Pi = (Zi/f)*pi;
 		
 		Zd = R.row(2).dot(Pi-menos_T);
@@ -686,12 +764,12 @@ int main() {
 	//cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	//parte1();
 
-	//cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
-	//parte2();
+	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
+	parte2();
 	
 	//cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
 	//parte3();
 	
-	cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
-	parte4();
+	//cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
+	//parte4();
 }
