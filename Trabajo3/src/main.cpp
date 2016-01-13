@@ -636,7 +636,7 @@ void parte4() {
 	//Recuperamos los puntos en correspondencias que se han usado en la estimacion de F
 	vector<Point2f> corresp_1, corresp_2;
 
-	Mat F = estimarF(im0, im4, 50, corresp_1, corresp_2);
+	Mat F = estimarF(im4, im1, 50, corresp_1, corresp_2);
 	
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
@@ -803,8 +803,7 @@ void parte4() {
 	//Vemos que combinacion es la adecuada
 	while (!encontrado) {
 		cambio = false;
-		cout << "Una iteracion" << endl;
-		
+				
 		for (int i = 0; i < corresp_1.size() and !cambio and !encontrado; i++) {
 			//Calculamos Zi y Zd
 			pi.at<double>(0,0) = corresp_1.at(i).x;
@@ -854,14 +853,14 @@ void parte4() {
 
 
 int main() {
-	/*cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
-	parte1();*/
+	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
+	parte1();
 
-	/*cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
-	parte2();*/
+	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
+	parte2();
 	
-	/*cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
-	parte3();*/
+	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
+	parte3();
 	
 	cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
 	parte4();
