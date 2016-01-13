@@ -243,11 +243,22 @@ void parte1() {
 	dibujarPtos(proyecciones_camara_estimada, imagen_ptos, Scalar(0, 255, 255));
 	
 	cout << "La camara construida es: " << endl;
-	mostrarMatriz(camara_generada);
+		
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 4; j++)
+			cout << camara_generada.at<float>(i,j) << " ";
+		cout << endl;
+	}
+
+	cout << endl;
 	
 	cout << "La camara estimada es: " << endl;
-	mostrarMatriz(camara_estimada);
-
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 4; j++)
+			cout << camara_estimada.at<float>(i,j) << " ";
+		cout << endl;
+	}
+	cout << endl;
 	imshow("Ptos proyectados (azul) y ptos estimados (amarillo)", imagen_ptos);
 	
 	cout << "El error cometido en la aproximacion es: " << calcularDistanciaMatrices(camara_generada, camara_estimada) << endl;
@@ -258,15 +269,15 @@ void parte1() {
 
 //Funcion donde se estructuran los pasos necesarios para el segundo punto de la practica.
 void parte2() {
-	//Cargamos las imagenes en color:
 	vector<Mat> imagenes_tablero, imagenes_calibracion;
 	vector<Point2f> esquinas_img_actual;
 	vector<vector<Point2f>> esquinas_imgs_calibracion;
 
 	Size tamano_tablero = Size(13, 12);
-
+	
+	//Cargamos las imagenes en color
 	for (int i = 1; i <= 25; i++)
-		imagenes_tablero.push_back( imread("imagenes/chessboard/Image"+to_string(i)+".tif", CV_8U));
+		imagenes_tablero.push_back( imread("imagenes/Image"+to_string(i)+".tif", CV_8U));
 		
 	//Obtenemos las posiciones de las esquinas del tablero en las imagen donde podamos localizarlas.
 	for (int i = 0; i < 25; i++) {
@@ -281,10 +292,8 @@ void parte2() {
 	cout << "Hemos podido localizar todas las esquinas en " << imagenes_calibracion.size() << " imagenes." << endl;
 	
 	//Refinamos las coordenadas obtenidas anteriormente.
-	for (int i = 0; i < imagenes_calibracion.size(); i++) {
-		//cout << "Hemos refinado las esquinas encontradas en la imagen " << i+1 << "/4" << endl;
+	for (int i = 0; i < imagenes_calibracion.size(); i++)
 		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), Size(5,5), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
-	}
 	
 	//Pintamos las esquinas encontradas:
 	for (int i = 0; i < imagenes_calibracion.size(); i++) {
@@ -292,63 +301,62 @@ void parte2() {
 		drawChessboardCorners( imagenes_calibracion.at(i), tamano_tablero, Mat(esquinas_imgs_calibracion.at(i)), true);
 	}
 	
-	/*imshow("Tablero 0", imagenes_calibracion.at(0));
+	imshow("Tablero 0", imagenes_calibracion.at(0));
 	imshow("Tablero 1", imagenes_calibracion.at(1));
 	imshow("Tablero 2", imagenes_calibracion.at(2));
-	imshow("Tablero 3", imagenes_calibracion.at(3));*/
+	imshow("Tablero 3", imagenes_calibracion.at(3));
 	
 	vector<Point3f> esquinas_teoricas;
 	
-	cout << tamano_tablero.height << " " << tamano_tablero.width << endl;
 	//Obtenemos los ptos teoricos donde ha de estar el patron que estamos buscando
-  for( int i = 0; i < tamano_tablero.height; i++)
-    for( int j = 0; j < tamano_tablero.width; j++)
-        esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
+	for( int i = 0; i < tamano_tablero.height; i++)
+		for( int j = 0; j < tamano_tablero.width; j++)
+			esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
 
 	vector<vector<Point3f> > puntos_objeto;
 	puntos_objeto.resize(imagenes_calibracion.size(), esquinas_teoricas);
 	
-	double error1, error2, error3;
+	double error;
 	
 	Mat K = Mat::eye(3,3,CV_64F);
 	Mat coef_distorsion = Mat::zeros(8, 1, CV_64F);
 	vector<Mat> rvecs, tvecs;
 	
-	error1 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
 	
 	cout << "Los parametros de distorsion calculados suponiendo que no hay ninguna distorsion son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
 		
 	cout << endl;
-	cout << "El error con el que se ha calibrado la camara al suponer que no hay distorsion es: " << error1 << endl;
-
-	error2 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_RATIONAL_MODEL);
+	cout << "El error con el que se ha calibrado la camara al suponer que no hay distorsion es: " << error << endl;
+	
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_RATIONAL_MODEL);
 	
 	cout << "Los parametros de distorsion calculados suponiendo que solo hay distorsion radial son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
 	cout << endl;
 
-	cout << "El error al introducir solo distorsion radial: " << error2 << endl;
+	cout << "El error al introducir solo distorsion radial: " << error << endl;
 	
-	error3 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
 	
 	cout << "Los parametros de distorsion calculados al suponer que solo hay distorsion tangencial son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
 		
 	cout << endl;
-	cout << "El error al introducir solo distorsion tangencial es: " << error3 << endl;
+	cout << "El error al introducir solo distorsion tangencial es: " << error << endl;
 	
-	error1 = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_RATIONAL_MODEL);
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_RATIONAL_MODEL);
 	
 	cout << "Los parametros de distorsion calculados suponiendo que tenemos ambos tipos de distorisiones son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
 	
 	cout << endl;	
-	cout << "Calculando todos los coeficientes de distorsion el error es: " << error1 << endl;
+	cout << "Calculando todos los coeficientes de distorsion el error es: " << error << endl;
 	
 	waitKey(0);
 	destroyAllWindows();
@@ -770,11 +778,11 @@ void parte4() {
 
 
 int main() {
-	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
-	parte1();
+	/*cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
+	parte1();*/
 
-	//cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
-	//parte2();
+	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
+	parte2();
 	
 	//cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
 	//parte3();
