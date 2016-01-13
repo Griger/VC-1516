@@ -312,10 +312,12 @@ void parte2() {
 	for( int i = 0; i < tamano_tablero.height; i++)
 		for( int j = 0; j < tamano_tablero.width; j++)
 			esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
-
+	
+	//Copiamos los puntos teoricos tantas veces como conjuntos de puntos reales tengamos.
 	vector<vector<Point3f> > puntos_objeto;
 	puntos_objeto.resize(imagenes_calibracion.size(), esquinas_teoricas);
 	
+	//Calculamos los parametros de calibracion y el error en distintas situaciones.
 	double error;
 	
 	Mat K = Mat::eye(3,3,CV_64F);
@@ -324,38 +326,70 @@ void parte2() {
 	
 	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
 	
-	cout << "Los parametros de distorsion calculados suponiendo que no hay ninguna distorsion son: " << endl;
+	cout << "Los parametros de distorsion y la K calculados suponiendo que no hay ninguna distorsion son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
+		
+	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
 		
 	cout << endl;
 	cout << "El error con el que se ha calibrado la camara al suponer que no hay distorsion es: " << error << endl;
 	
+	K = Mat::eye(3,3,CV_64F);
+	
 	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_RATIONAL_MODEL);
 	
-	cout << "Los parametros de distorsion calculados suponiendo que solo hay distorsion radial son: " << endl;
+	cout << "Los parametros de distorsion y la K calculados suponiendo que solo hay distorsion radial son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
 	cout << endl;
-
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+	
 	cout << "El error al introducir solo distorsion radial: " << error << endl;
 	
+	K = Mat::eye(3,3,CV_64F);
 	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
 	
-	cout << "Los parametros de distorsion calculados al suponer que solo hay distorsion tangencial son: " << endl;
+	cout << "Los parametros de distorsion y la K calculados al suponer que solo hay distorsion tangencial son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
-		
+	
 	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+	
 	cout << "El error al introducir solo distorsion tangencial es: " << error << endl;
 	
+	K = Mat::eye(3,3,CV_64F);
 	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_RATIONAL_MODEL);
 	
-	cout << "Los parametros de distorsion calculados suponiendo que tenemos ambos tipos de distorisiones son: " << endl;
+	cout << "Los parametros de distorsion y la K calculados suponiendo que tenemos ambos tipos de distorisiones son: " << endl;
 	for (int i = 0; i < 8; i++)
 		cout << coef_distorsion.at<double>(i,0) << " ";
 	
-	cout << endl;	
+	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+	
 	cout << "Calculando todos los coeficientes de distorsion el error es: " << error << endl;
 	
 	waitKey(0);
@@ -485,10 +519,11 @@ Mat estimarF (Mat im1, Mat im2, int umbral, vector<Point2f> &corresp_1, vector<P
 //Funcion donde se estructuran los pasos necesarios para el tercer punto de la practica
 void parte3() {
 	//Cargamos las imagenes
-	Mat vmort1 = imread("imagenes/vmort/Vmort1.pgm");
-	Mat vmort2 = imread("imagenes/vmort/Vmort2.pgm");
+	Mat vmort1 = imread("imagenes/Vmort1.pgm");
+	Mat vmort2 = imread("imagenes/Vmort2.pgm");
 	
-	int umbral = 97;
+	//Obtenemos puntos clave en las imagenes con BRISK y buscamos matches
+	int umbral = 60;
 	vector<KeyPoint> KPvmort1 = obtenerKeyPoints(vmort1, umbral);
 	vector<KeyPoint> KPvmort2 = obtenerKeyPoints(vmort2, umbral);
 	vector<DMatch> matches = obtenerMatches(vmort1, vmort2, umbral);
@@ -512,34 +547,39 @@ void parte3() {
 	
 	int numero_descartes = 0;
 	
+	//Vemos cuantas parejas de puntos en correspondencias han sido descartadas por RANSAC
 	for (int i = 0; i < buenos_malos.size(); i++)
 		if (buenos_malos.at(i) == 0)
 			numero_descartes++;
 		
 	cout << "RANSAC ha descartado: " << numero_descartes << " parejas en correspondencias." << endl;
 	
+	//Calculamos las lineas epipolares para los puntos de cada imagen
 	vector<Vec3f> lineas_para_vmort1, lineas_para_vmort2;
 	computeCorrespondEpilines(ptosCorrespondenciasvmort1, 1, F, lineas_para_vmort1);
 	computeCorrespondEpilines(ptosCorrespondenciasvmort2, 2, F, lineas_para_vmort2);
 	
-	cout << "Se han obtenido: " << lineas_para_vmort1.size() << "lineas epipolares" << endl;
 	Vec3f l;
+	int pintadas = 0;
 	double c = vmort2.cols;
 	
 	//Dibujamos las lineas epipolares evaluandolas en x = 0 y x = num_columnas_imagen
-	for (int i = 0; i < lineas_para_vmort1.size(); i++) {
+	for (int i = 0; i < lineas_para_vmort1.size() and pintadas <= 200; i++) {
 		if (buenos_malos.at(i) == 1) {
 			l = lineas_para_vmort1.at(i);
 			line(vmort2, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));
+			pintadas++;
 		}	
 	}
 	
 	c = vmort1.cols;
+	pintadas = 0;
 	
-	for (int i = 0; i < lineas_para_vmort2.size(); i++) {
+	for (int i = 0; i < lineas_para_vmort2.size() and pintadas <= 200; i++) {
 		if (buenos_malos.at(i) == 1) {
 			l = lineas_para_vmort2.at(i);
 			line(vmort1, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));
+			pintadas++;
 		}	
 	}
 	
@@ -743,21 +783,21 @@ void parte4() {
 	mostrarMatriz(pi);*/
 	//cout << "El T es: "; mostrarMatriz(T);
 	//cout << "La f es: " << f << endl;
-	Mat R = R_E_menosT;
+	Mat R = R_menosE_T;
 	int contador = 0;
 	for (int i = 0; i < corresp_1.size(); i++) {
 		pi.at<double>(0,0) = corresp_1.at(i).x;
 		pi.at<double>(0,1) = corresp_1.at(i).y;
 		//cout << "xd: " << corresp_2.at(i).x << endl;
 		//mostrarMatriz(f*R_E_T.row(0) - corresp_2.at(i).x*R_E_T.row(2));
-		dot1 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(menos_T);
+		dot1 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(T);
 		//cout << "El producto escalar vale: " << dot << endl;
 		dot2 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(pi);
 		Zi = f*dot1/dot2;
 		 
 		Pi = (Zi/f)*pi;
 		
-		Zd = R.row(2).dot(Pi-menos_T);
+		Zd = R.row(2).dot(Pi-T);
 		
 		if (Zi < 0 || Zd < 0)
 			contador++;
@@ -781,11 +821,11 @@ int main() {
 	/*cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	parte1();*/
 
-	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
-	parte2();
+	/*cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
+	parte2();*/
 	
-	//cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
-	//parte3();
+	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
+	parte3();
 	
 	//cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
 	//parte4();
