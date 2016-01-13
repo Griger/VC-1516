@@ -460,62 +460,6 @@ vector<DMatch> obtenerMatches (Mat im1, Mat im2, int umbral){
 	return matches;
 }
 
-Mat estimarF (Mat im1, Mat im2, int umbral, vector<Point2f> &corresp_1, vector<Point2f> &corresp_2) {
-	vector<KeyPoint> KPim1 = obtenerKeyPoints(im1, umbral);
-	vector<KeyPoint> KPim2 = obtenerKeyPoints(im2, umbral);
-	vector<DMatch> matches = obtenerMatches(im1, im2, umbral);
-	
-	//Construimos los vectores de ptos en correspondencias para el calculo de F
-	vector<Point2f> ptos_corresp_1, ptos_corresp_2;
-	
-	for (int i = 0; i < matches.size(); i++) {
-		ptos_corresp_1.push_back(KPim1[matches[i].queryIdx].pt);
-		ptos_corresp_2.push_back(KPim2[matches[i].trainIdx].pt);
-	}
-	
-	//Calculamos la matriz fundamental:
-	vector <unsigned char> buenos_malos; //vector donde se marca que parejas han sido rechazadas por RANSAC
-	Mat F = findFundamentalMat(ptos_corresp_1, ptos_corresp_2, CV_FM_8POINT + CV_FM_RANSAC, 1, 0.99, buenos_malos);
-	
-	vector<Vec3f> lineas_para_1, lineas_para_2;
-	computeCorrespondEpilines(ptos_corresp_1, 1, F, lineas_para_1);
-	computeCorrespondEpilines(ptos_corresp_2, 2, F, lineas_para_2);
-	
-	double error1 = 0;
-	double error2 = 0;
-	int dem = 0;
-	Vec3f l;
-	Point2f p;
-	for (int i = 0; i < lineas_para_1.size(); i++) {
-		if (buenos_malos.at(i) == 1) {
-			l = lineas_para_1.at(i);
-			p = ptos_corresp_2.at(i);
-			corresp_2.push_back(p);
-			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
-			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
-		
-			l = lineas_para_2.at(i);
-			p = ptos_corresp_1.at(i);
-			corresp_1.push_back(p);
-			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
-			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
-			
-			dem++;
-		}
-	}
-	
-	error1 = error1 / dem;
-	error2 = error2 / dem;
-	
-	cout << "El error promedio cometido para las lineas de 1 es: " << error1 << endl;
-	cout << "El error promedio cometido para las lineas de 2 es: " << error2 << endl;	
-	
-	
-	
-	return F;
-}
-	
-
 //Funcion donde se estructuran los pasos necesarios para el tercer punto de la practica
 void parte3() {
 	//Cargamos las imagenes
@@ -619,17 +563,80 @@ void parte3() {
 
 }
 
+/*
+Funcion que estima la matriz fundamental entre dadas dos imagenes
+@im1 y @im2 son las imagenes
+@umbral el umbral para BRISK
+@corresp_1 y @corresp_2 vectores donde se devolveran los puntos en correspondencias calculados en ambas imagenes
+*/
+Mat estimarF (Mat im1, Mat im2, int umbral, vector<Point2f> &corresp_1, vector<Point2f> &corresp_2) {
+	vector<KeyPoint> KPim1 = obtenerKeyPoints(im1, umbral);
+	vector<KeyPoint> KPim2 = obtenerKeyPoints(im2, umbral);
+	vector<DMatch> matches = obtenerMatches(im1, im2, umbral);
+	
+	//Construimos los vectores de ptos en correspondencias para el calculo de F
+	vector<Point2f> ptos_corresp_1, ptos_corresp_2;
+	
+	for (int i = 0; i < matches.size(); i++) {
+		ptos_corresp_1.push_back(KPim1[matches[i].queryIdx].pt);
+		ptos_corresp_2.push_back(KPim2[matches[i].trainIdx].pt);
+	}
+	
+	//Calculamos la matriz fundamental:
+	vector <unsigned char> buenos_malos; //vector donde se marca que parejas han sido rechazadas por RANSAC
+	Mat F = findFundamentalMat(ptos_corresp_1, ptos_corresp_2, CV_FM_8POINT + CV_FM_RANSAC, 1, 0.99, buenos_malos);
+	
+	//Calculamos las lineas epipolares para ambas imagenes
+	vector<Vec3f> lineas_para_1, lineas_para_2;
+	computeCorrespondEpilines(ptos_corresp_1, 1, F, lineas_para_1);
+	computeCorrespondEpilines(ptos_corresp_2, 2, F, lineas_para_2);
+	
+	//Calculamos el error de la estimacion
+	double error1 = 0;
+	double error2 = 0;
+	int dem = 0;
+	Vec3f l;
+	Point2f p;
+	for (int i = 0; i < lineas_para_1.size(); i++) {
+		if (buenos_malos.at(i) == 1) {
+			l = lineas_para_1.at(i);
+			p = ptos_corresp_2.at(i);
+			corresp_2.push_back(p);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+		
+			l = lineas_para_2.at(i);
+			p = ptos_corresp_1.at(i);
+			corresp_1.push_back(p);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+			
+			dem++;
+		}
+	}
+	
+	error1 = error1 / dem;
+	error2 = error2 / dem;
+	
+	cout << "El error promedio cometido para las lineas de 1 es: " << error1 << endl;
+	cout << "El error promedio cometido para las lineas de 2 es: " << error2 << endl;	
+	
+	
+	
+	return F;
+}
+
 //Funcion donde se estructuran los pasos necesarios para el cuarto punto de la practica
 void parte4() {
 	//Cargamos las imagenes
-	Mat im0 = imread("imagenes/reconstruccion/rdimage.000.ppm");
-	Mat im1 = imread("imagenes/reconstruccion/rdimage.001.ppm");
-	Mat im4 = imread("imagenes/reconstruccion/rdimage.004.ppm");
+	Mat im0 = imread("imagenes/rdimage.000.ppm");
+	Mat im1 = imread("imagenes/rdimage.001.ppm");
+	Mat im4 = imread("imagenes/rdimage.004.ppm");
 	
 	//Recuperamos los puntos en correspondencias que se han usado en la estimacion de F
 	vector<Point2f> corresp_1, corresp_2;
 
-	Mat F = estimarF(im1, im4, 50, corresp_1, corresp_2);
+	Mat F = estimarF(im0, im4, 50, corresp_1, corresp_2);
 	
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
@@ -674,7 +681,8 @@ void parte4() {
 	Mat T = Mat(1,3, CV_64F);
 	Mat menos_T = Mat(1,3, CV_64F);
 	int fila_donde_despejar;
-
+	
+	//Despejamos T de la fila de EEt_norm con el elemento de la diagonal mas pequeño
 	double elem = EEt_norm.at<double>(0,0);
 	for (int i = 0; i < 3; i++)
 		if (EEt_norm.at<double>(i,i) <= elem) {
@@ -690,6 +698,8 @@ void parte4() {
 	menos_T.at<double>(0,1) = -T.at<double>(0,1);
 	menos_T.at<double>(0,2) = -T.at<double>(0,2);
 	
+	
+	//Construimos las rotaciones:
 	Mat menos_E_norm = -E_norm;
 	//mostrarMatriz(menos_T);
 	Mat R_E_T = Mat(3,3,CV_64F);
@@ -765,55 +775,81 @@ void parte4() {
 	cout << "La rotacion para -E y -T:" << endl;
 	mostrarMatriz(R_menosE_menosT);
 	
+	vector<Mat> Rs;
+	Rs.push_back(R_E_T);
+	Rs.push_back(R_E_menosT);
+	Rs.push_back(R_menosE_T);
+	Rs.push_back(R_menosE_menosT);
+	
 	//Obtenemos la distancia focal en pixels de la matriz de calibracion K:
 	double f = K.at<double>(0,0);
+	
 	
 	int num_corresp = corresp_1.size();
 	double dot1, dot2, Zi, Zd;
 	Mat pi = Mat(1,3,CV_64F);
 	Mat Pi = Mat(1,3,CV_64F);
 	pi.at<double>(0,2) = 1.0;
-	/*Point2f p = corresp_1.at(0);
 	
-	cout << "El p es (" << p.x << "," << p.y << ")" << endl;
-	pi.at<double>(0,0) = corresp_1.at(0).x;
-	pi.at<double>(0,1) = corresp_1.at(0).y;
+	int R_act = 0;
+	Mat R = Rs.at(R_act);
+	Mat T_act = Mat(1,3,CV_64F);
+	T.copyTo(T_act);
 	
-	cout << "pi" << endl;
-	mostrarMatriz(pi);*/
-	//cout << "El T es: "; mostrarMatriz(T);
-	//cout << "La f es: " << f << endl;
-	Mat R = R_menosE_T;
 	int contador = 0;
-	for (int i = 0; i < corresp_1.size(); i++) {
-		pi.at<double>(0,0) = corresp_1.at(i).x;
-		pi.at<double>(0,1) = corresp_1.at(i).y;
-		//cout << "xd: " << corresp_2.at(i).x << endl;
-		//mostrarMatriz(f*R_E_T.row(0) - corresp_2.at(i).x*R_E_T.row(2));
-		dot1 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(T);
-		//cout << "El producto escalar vale: " << dot << endl;
-		dot2 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(pi);
-		Zi = f*dot1/dot2;
-		 
-		Pi = (Zi/f)*pi;
+	bool encontrado = false;
+	bool cambio;
+	
+	//Vemos que combinacion es la adecuada
+	while (!encontrado) {
+		cambio = false;
+		cout << "Una iteracion" << endl;
 		
-		Zd = R.row(2).dot(Pi-T);
+		for (int i = 0; i < corresp_1.size() and !cambio and !encontrado; i++) {
+			//Calculamos Zi y Zd
+			pi.at<double>(0,0) = corresp_1.at(i).x;
+			pi.at<double>(0,1) = corresp_1.at(i).y;
+			
+			dot1 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(T_act);
+			dot2 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(pi);
+			
+			Zi = f*dot1/dot2;
+			 
+			Pi = (Zi/f)*pi;
 		
-		if (Zi < 0 || Zd < 0)
-			contador++;
-		
+			Zd = R.row(2).dot(Pi-T_act);
+			
+			//Si ambos negativos cambiamos el signo a T
+			if (Zi < 0 and Zd < 0) {
+				T_act = -T_act;
+				
+				if (R_act%2 == 0)
+					R_act++;
+				else
+					R_act--;
+					
+				R = Rs.at(R_act);
+				cambio = true;
+			}
+			//Si tienen signos distintos cambiamos de signo a la E
+			else if (Zi*Zd < 0){
+				R_act = (R_act+2)%4;
+				R = Rs.at(R_act);
+				cambio = true;
+			}
+			//Si los dos positivos, hemos acabado.
+			else
+				encontrado = true;					
+		}
 	}
 	
-	cout << "Hay " << contador << " Zs negativos de" << corresp_1.size() << " posibles." << endl;
-		
-		
+	cout << "La R es:" << endl;
+	mostrarMatriz(R);
+	cout << "Y T: " << endl;
+	mostrarMatriz(T_act);		
 
 	waitKey(0);
 	destroyAllWindows();
-
-
-
-
 }
 
 
@@ -824,9 +860,9 @@ int main() {
 	/*cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
 	parte2();*/
 	
-	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
-	parte3();
+	/*cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
+	parte3();*/
 	
-	//cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
-	//parte4();
+	cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
+	parte4();
 }
