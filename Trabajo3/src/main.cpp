@@ -853,6 +853,7 @@ void parte4() {
 
 
 int main() {
+//funciona
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
 	parte1();
 
