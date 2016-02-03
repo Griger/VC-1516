@@ -124,8 +124,59 @@ vector<Mat> computeGaussianPyramid(Mat image){
 	return gaussianPyramid;
 }
 
-Mat expand(Mat Matrix){
+/*
+Funcion que orla la matriz para poder hacer la operacion expand
+@im: la matriz a orlar
+*/
+Mat getEdgedMat1C (Mat im) {
+	
+}
 
+/*
+Funcion que devuelve el valor w(m,n) siendo w la funcion de pesos con m,n en el conjunto {-2,-1,0,1,2}
+*/
+float w (int m, int n) {
+	Mat w_hat = Mat::zeros(1, 5, CV_32F);
+	w_hat.at<float>(0,0) = 0.05;
+	w_hat.at<float>(0,1) = 0.25;
+	w_hat.at<float>(0,2) = 0.4;
+	w_hat.at<float>(0,3) = 0.25;
+	w_hat.at<float>(0,4) = 0.05;
+
+	return w_hat.at<float>(0, m+2)*w_aht.at<float>(0,n+2);
+}
+
+/*
+Funcion que devuelve el elemento (@i, @j) de la matriz resultante de hacer expand(@prev_level)
+*/
+float getExpansionValue (int i, int j, Mat prev_level) {
+	float sum = 0.0;
+
+	for (int m = -2; m <= 2; m++)
+		for (int n = -2; n <= 2; n++)
+			if ( (i-m)%2 == 0 && (j-n)%2 == 0 )
+				sum += w(m,n)*prev_level((i-m)/2, (j-n)/2);
+
+	return 4*sum;
+}
+
+/*
+Funcion que realiza la operacion de expansion sobre una matriz
+@im: la matriz a expandir
+*/
+Mat expand (Mat im) {
+	int exp_rows = (im.rows%2 == 0) ? im.rows*2 : im.rows*2 - 1;
+	int exp_cols = (im.cols%2 == 0) ? im.cols*2 : im.cols*2 - 1;
+
+
+	Mat edged_im = getEdgedMat1C(im);
+	Mat expansion = Mat::zeros(exp_rows, exp_cols, CV_32F);
+
+	for (int i = 0; i < exp_rows; i++)
+		for (int j = 0; j < exp_cols; j++)
+			expansion.at<float>(i,j) = getExpansionValue(i,j, im);
+
+	return expansion;
 }
 
 vector<Mat> computeLaplacianPyramid(Mat image){
