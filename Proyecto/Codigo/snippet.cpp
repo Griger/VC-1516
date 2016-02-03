@@ -1,32 +1,142 @@
-Mat Reduce(Mat Matrix){
+/*
+Funcion que devuelve un vector preparado para hacer la convolucion sin problemas en los pixeles cercanos a los bordes, trabajando con imagenes con un solo canal.
+@signal: vector de entrada al que aplicarle la convolucion.
+@mask: mascara con la que convolucionar (1C).
+*/
+Mat getEdged1CVector (Mat &signal, Mat &mask) {
+	//A�adiremos digamos a cada lado del vector (longitud_senal - 1)/2 pues son los pixeles como maximo que sobrarian al situar la mascara en una esquina.
+	//Nosotros vamos a trabajar con vectores fila, pero no sabemos como sera senal con lo que vamos a trasponerla si es necesario.
+	Mat signal_copy;
 
+	int copy_cols = signal_copy.cols;
+
+	int extra_pixels = 4; //<-- numero de pixeles necesarios para orlar.
+
+	int edged_vector_cols = copy_cols + extra_pixels;
+
+	Mat edged_vector = Mat(1, edged_vector_cols, signal.type());
+
+	int copy_start, copy_end; // <-- posiciones donde comienza la copia del vector, centrada.
+
+	copy_start = extra_pixels/2;
+	copy_end = copy_cols + copy_start - 1;
+
+	//Copiamos senal centrado en vectorAuxiliar
+
+	for (int i = copy_start; i <= copy_end; i++)
+		edged_vector.at<float>(0, i) = signal_copy.at<float>(0, i-copy_start);
+
+	// Ahora rellenamos los vectores de orlado segun la tecnica del articulo.
+	for (int i = 1; i <= copy_start; i++) {
+		edged_vector.at<float>(0, copy_start - i) = 2 * edged_vector.at<float>(0, copy_start) - edged_vector.at<float>(0, copy_start + i);
+		edged_vector.at<float>(0, copy_end + i) = 2 * edged_vector.at<float>(0, copy_end) - edged_vector.at<float>(0, copy_end -i);
+	}
+
+	return edged_vector;
 }
 
-vector<Mat> ComputeGaussianpyramid(Mat image){
+
+/*
+Funcion que calcula la convolucion de dos vectores fila.
+@signal: el vector al que le aplicamos la mascara de convolucion.
+@mask: la mascara de convolucion.
+*/
+Mat computeConvolution1CVectors (Mat &signal, Mat &mask) {
+	//preparamos el vector para la convolucion orlandolo.
+	Mat edged_copy = getEdged1CVector( signal, mask);
+	Mat edged_copy_segment;
+	Mat convolution = Mat(1, signal.cols, signal.type());
+
+	int copy_start, copy_end, border_side_length;
+	//calculamos el rango de pixeles a los que realmente tenemos que aplicar la convolucion, excluyendo los vectores de orla.
+	copy_start = (mask.cols - 1)/2;
+	copy_end = copy_start + signal.cols;
+	border_side_length = (mask.cols - 1) / 2;
+
+	for (int i = copy_start; i < copy_end; i++) {
+		//Vamos aplicando la convolucion a cada pixel seleccionando el segmento con el que convolucionamos.
+		edged_copy_segment = edged_copy.colRange(i - border_side_length, i + border_side_length + 1);
+		convolution.at<float>(0, i - copy_start) = mask.dot(edged_copy_segment);
+	}
+
+	return convolution;
+}
+/*
+Funcion que calcula la convolucion de una imagen 1C con una mascara separada en un solo vector fila (por ser simetrica).
+@im: la imagen CV_32F a convolucionar.
+*/
+Mat convolution2D1C (Mat &im) {
+	Mat mask = Mat::zeros(1, 5, CV_32F);
+	mask.at<float>(0,0) = 0.05;
+	mask.at<float>(0,1) = 0.25;
+	mask.at<float>(0,2) = 0.4;
+	mask.at<float>(0,3) = 0.25;
+	mask.at<float>(0,4) = 0.05;
+
+	Mat convolution = Mat(im.rows, im.cols, im.type()); //matriz donde introducimos el resultado de la convolucion
+
+	//Convolucion por filas
+	for (int i = 0; i < convolution.rows; i++) {
+		computeConvolution1CVectors(im.row(i), mask.copyTo(convolution.row(i));
+	}
+
+	//Convolucion por columnas
+	convolution = convolution.t(); //trasponemos para poder operar como si fuese por filas
+
+	for (int i = 0; i < convolution.rows; i++) {
+		computeConvolution1CVectors(im.row(i), mask.copyTo(convolution.row(i));
+	}
+
+	convolution = convolution.t(); //deshacemos la trasposicion para obtener el resultado final.
+
+	return convolution;
+}
+
+/*
+Funcion que submuestrea una imagen tomando solo las columnas y filas impares.
+@im: la imagen CV_32F a submuestrear.
+*/
+Mat subSample1C(Mat &im) {
+	Mat subsample = Mat(im.rows / 2, im.cols / 2, im.type());
+
+	for (int i = 0; i < subsample.rows; i++)
+		for (int j = 0; j < subsample.cols; j++)
+			subsample.at<float>(i, j) = im.at<float>(i*2+1, j*2+1);
+
+	return subsample;
+}
+
+Mat reduce(Mat im){
+	Mat convolution = convolution2D1C(im);
+
+	return subSample1C(convolution);
+}
+
+vector<Mat> computeGaussianPyramid(Mat image){
 	vector<Mat> gaussianPyramid;
 	Mat actualLevelMatrix = image;
 
 	while (5 <= actualLevelMatrix.cols && 5 <= actualLevelMatrix.rows){
 		gaussianPyramid.push_back(actualLevelMatrix);
-		actualLevelMatrix = Reduce(actualLevelMatrix);
+		actualLevelMatrix = reduce(actualLevelMatrix);
 	}
 
 	return gaussianPyramid;
 }
 
-Mat Expand(Mat Matrix){
+Mat expand(Mat Matrix){
 
 }
 
-vector<Mat> ComputeLaplacianpyramid(Mat image){
+vector<Mat> computeLaplacianPyramid(Mat image){
 	vector<Mat> solution, gaussianPyramid;
 	Mat actualLevelMatrix;
 
-	gaussianPyramid = ComputeGaussianpyramid(image);
+	gaussianPyramid = computeGaussianPyramid(image);
 
 	for (int i = 0; i < gaussianPyramid.size(); i++){
 		if(i < gaussianPyramid.size() - 1)
-			actualLevelMatrix = gaussianPyramid.at(i) - Expand(gaussianPyramid.at(i+1));
+			actualLevelMatrix = gaussianPyramid.at(i) - expand(gaussianPyramid.at(i+1));
 		else
 			actualLevelMatrix = gaussianPyramid.at(i);
 
