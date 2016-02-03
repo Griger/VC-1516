@@ -213,7 +213,8 @@ void dibujarPtos(vector<Mat> ptos, Mat im, Scalar color) {
 
 	float longitud_x = (x_max - x_min);
 	float longitud_y = (y_max - y_min);
-
+	
+	//Hacemos un escalado para que los puntos puedan verse bien.
 	float x, y;
 	for (int i = 0; i < ptos.size(); i++) {
 		x = ptos.at(i).at<float>(0,0);
@@ -236,12 +237,30 @@ void parte1() {
 	vector<Mat> proyecciones_camara_estimada = obtenerPtosProyectados(ptos_mundo, camara_estimada);
 
 	Mat imagen_ptos = Mat::zeros(500, 500, CV_32FC3);
-
+	
+	//dibujamos las proyecciones de ambas camaras sobre la misma imagen
 	dibujarPtos(proyecciones_camara_original, imagen_ptos, Scalar(255, 0, 0));
 	dibujarPtos(proyecciones_camara_estimada, imagen_ptos, Scalar(0, 255, 255));
+	
+	cout << "La camara construida es: " << endl;
+		
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 4; j++)
+			cout << camara_generada.at<float>(i,j) << " ";
+		cout << endl;
+	}
 
+	cout << endl;
+	
+	cout << "La camara estimada es: " << endl;
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 4; j++)
+			cout << camara_estimada.at<float>(i,j) << " ";
+		cout << endl;
+	}
+	cout << endl;
 	imshow("Ptos proyectados (azul) y ptos estimados (amarillo)", imagen_ptos);
-
+	
 	cout << "El error cometido en la aproximacion es: " << calcularDistanciaMatrices(camara_generada, camara_estimada) << endl;
 
 	waitKey(0);
@@ -250,16 +269,16 @@ void parte1() {
 
 //Funcion donde se estructuran los pasos necesarios para el segundo punto de la practica.
 void parte2() {
-	//Cargamos las imagenes en color:
 	vector<Mat> imagenes_tablero, imagenes_calibracion;
 	vector<Point2f> esquinas_img_actual;
 	vector<vector<Point2f>> esquinas_imgs_calibracion;
 
 	Size tamano_tablero = Size(13, 12);
-
+	
+	//Cargamos las imagenes en color
 	for (int i = 1; i <= 25; i++)
-		imagenes_tablero.push_back( imread("imagenes/chessboard/Image"+to_string(i)+".tif", CV_8U));
-
+		imagenes_tablero.push_back( imread("imagenes/Image"+to_string(i)+".tif", CV_8U));
+		
 	//Obtenemos las posiciones de las esquinas del tablero en las imagen donde podamos localizarlas.
 	for (int i = 0; i < 25; i++) {
 		if ( findChessboardCorners(imagenes_tablero.at(i), tamano_tablero, esquinas_img_actual) ) {
@@ -271,37 +290,108 @@ void parte2() {
 	}
 
 	cout << "Hemos podido localizar todas las esquinas en " << imagenes_calibracion.size() << " imagenes." << endl;
-
+	
 	//Refinamos las coordenadas obtenidas anteriormente.
-	for (int i = 0; i < imagenes_calibracion.size(); i++) {
-		//cout << "Hemos refinado las esquinas encontradas en la imagen " << i+1 << "/4" << endl;
-		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), tamano_tablero, Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
-	}
-
+	for (int i = 0; i < imagenes_calibracion.size(); i++)
+		cornerSubPix( imagenes_calibracion.at(i), esquinas_imgs_calibracion.at(i), Size(5,5), Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+	
 	//Pintamos las esquinas encontradas:
 	for (int i = 0; i < imagenes_calibracion.size(); i++) {
 		cvtColor(imagenes_calibracion.at(i), imagenes_calibracion.at(i), CV_GRAY2BGR);
 		drawChessboardCorners( imagenes_calibracion.at(i), tamano_tablero, Mat(esquinas_imgs_calibracion.at(i)), true);
 	}
-
+	
 	imshow("Tablero 0", imagenes_calibracion.at(0));
 	imshow("Tablero 1", imagenes_calibracion.at(1));
 	imshow("Tablero 2", imagenes_calibracion.at(2));
 	imshow("Tablero 3", imagenes_calibracion.at(3));
-
+	
 	vector<Point3f> esquinas_teoricas;
-
+	
 	//Obtenemos los ptos teoricos donde ha de estar el patron que estamos buscando
-  for( int i = 0; i < tamano_tablero.height; i++)
-    for( int j = 0; j < tamano_tablero.width; j++)
-        esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
-
-	vector<vector<Point3f> > puntos_objeto(1);
+	for( int i = 0; i < tamano_tablero.height; i++)
+		for( int j = 0; j < tamano_tablero.width; j++)
+			esquinas_teoricas.push_back(Point3f(float(j), float(i), 0));
+	
+	//Copiamos los puntos teoricos tantas veces como conjuntos de puntos reales tengamos.
+	vector<vector<Point3f> > puntos_objeto;
 	puntos_objeto.resize(imagenes_calibracion.size(), esquinas_teoricas);
-
-
-
-
+	
+	//Calculamos los parametros de calibracion y el error en distintas situaciones.
+	double error;
+	
+	Mat K = Mat::eye(3,3,CV_64F);
+	Mat coef_distorsion = Mat::zeros(8, 1, CV_64F);
+	vector<Mat> rvecs, tvecs;
+	
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
+	
+	cout << "Los parametros de distorsion y la K calculados suponiendo que no hay ninguna distorsion son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+		
+	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+		
+	cout << endl;
+	cout << "El error con el que se ha calibrado la camara al suponer que no hay distorsion es: " << error << endl;
+	
+	K = Mat::eye(3,3,CV_64F);
+	
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_ZERO_TANGENT_DIST|CV_CALIB_RATIONAL_MODEL);
+	
+	cout << "Los parametros de distorsion y la K calculados suponiendo que solo hay distorsion radial son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+	
+	cout << "El error al introducir solo distorsion radial: " << error << endl;
+	
+	K = Mat::eye(3,3,CV_64F);
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_FIX_K1|CV_CALIB_FIX_K2|CV_CALIB_FIX_K3|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5|CV_CALIB_FIX_K6);
+	
+	cout << "Los parametros de distorsion y la K calculados al suponer que solo hay distorsion tangencial son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+	
+	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+	
+	cout << "El error al introducir solo distorsion tangencial es: " << error << endl;
+	
+	K = Mat::eye(3,3,CV_64F);
+	error = calibrateCamera (puntos_objeto, esquinas_imgs_calibracion, imagenes_calibracion.at(0).size(), K, coef_distorsion, rvecs, tvecs, CV_CALIB_RATIONAL_MODEL);
+	
+	cout << "Los parametros de distorsion y la K calculados suponiendo que tenemos ambos tipos de distorisiones son: " << endl;
+	for (int i = 0; i < 8; i++)
+		cout << coef_distorsion.at<double>(i,0) << " ";
+	
+	cout << endl;
+	cout << "r: " << endl;
+	mostrarMatriz(rvecs.at(0));
+	cout << "t: " << endl;
+	mostrarMatriz(tvecs.at(0));
+	cout << endl << endl;
+	mostrarMatriz(K/K.at<double>(0,0));
+	
+	cout << "Calculando todos los coeficientes de distorsion el error es: " << error << endl;
+	
 	waitKey(0);
 	destroyAllWindows();
 
@@ -318,7 +408,7 @@ vector<KeyPoint> obtenerKeyPoints (Mat im, int umbral = 30) {
 	//Creamos el detector
 	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
 	vector<KeyPoint> puntosDetectados;
-
+	
 	//Obtenemos los KP:
 	ptrDetectorBRISK->detect(im, puntosDetectados);
 
@@ -336,13 +426,13 @@ Mat obtenerDescriptoresBRISK (Mat im, int umbral = 30) {
 	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
 	vector<KeyPoint> puntosDetectados;
 	Mat descriptores;
-
+	
 	//Obtenemos los KP:
 	ptrDetectorBRISK->detect(im, puntosDetectados);
-
+	
 	//Obtenemos los descriptores para estos KP:
 	ptrDetectorBRISK->compute(im, puntosDetectados, descriptores);
-
+	
 	return descriptores;
 }
 
@@ -354,107 +444,92 @@ Funcion que calcula los puntos en correspondencias entre dos imagen por el crite
 vector<DMatch> obtenerMatches (Mat im1, Mat im2, int umbral){
 	Mat descriptores1, descriptores2;
 	vector<DMatch> matches;
-
+	
 	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
 	BFMatcher matcher = BFMatcher(NORM_L2, true);
-
+	
 	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
 	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
 	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
-
+	
 	//clock_t t_inicio= clock();
 	//Calculamos los matches entre ambas imagenes:
-	matcher.match(descriptores1, descriptores2, matches);
+	matcher.match(descriptores1, descriptores2, matches);		
 	//printf("FB ha tardado: %.2fs\n",(double)(clock() - t_inicio)/CLOCKS_PER_SEC);
-
+	
 	return matches;
 }
-
-Mat estimarF (Mat im1, Mat im2, int umbral) {
-	vector<KeyPoint> KPim1 = obtenerKeyPoints(im1, umbral);
-	vector<KeyPoint> KPim2 = obtenerKeyPoints(im2, umbral);
-	vector<DMatch> matches = obtenerMatches(im1, im2, umbral);
-
-	//Construimos los vectores de ptos en correspondencias para el calculo de F
-	vector<Point2f> ptos_corresp_1, ptos_corresp_2;
-
-	for (int i = 0; i < matches.size(); i++) {
-		ptos_corresp_1.push_back(KPim1[matches[i].queryIdx].pt);
-		ptos_corresp_2.push_back(KPim2[matches[i].trainIdx].pt);
-	}
-
-	//Calculamos la matriz fundamental:
-	vector <unsigned char> buenos_malos; //vector donde se marca que parejas han sido rechazadas por RANSAC
-	Mat F = findFundamentalMat(ptos_corresp_1, ptos_corresp_2, CV_FM_8POINT + CV_FM_RANSAC, 1, 0.99, buenos_malos);
-
-	return F;
-}
-
 
 //Funcion donde se estructuran los pasos necesarios para el tercer punto de la practica
 void parte3() {
 	//Cargamos las imagenes
-	Mat vmort1 = imread("imagenes/vmort/Vmort1.pgm");
-	Mat vmort2 = imread("imagenes/vmort/Vmort2.pgm");
-
-	int umbral = 97;
+	Mat vmort1 = imread("imagenes/Vmort1.pgm");
+	Mat vmort2 = imread("imagenes/Vmort2.pgm");
+	
+	//Obtenemos puntos clave en las imagenes con BRISK y buscamos matches
+	int umbral = 60;
 	vector<KeyPoint> KPvmort1 = obtenerKeyPoints(vmort1, umbral);
 	vector<KeyPoint> KPvmort2 = obtenerKeyPoints(vmort2, umbral);
 	vector<DMatch> matches = obtenerMatches(vmort1, vmort2, umbral);
-
+	
 	cout << "Hemos obtenido: " << KPvmort1.size() << " y " << KPvmort2.size() << "Key Points" << endl;
 	cout << "Y de aqui hemos obtenido: " << matches.size() << "parejas en correspondencias. " << endl;
-
+	
 	//Construimos los vectores de ptos en correspondencias para el calculo de F.
 	vector<Point2f> ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2;
-
+		
 	for (int i = 0; i < matches.size(); i++){
 		ptosCorrespondenciasvmort1.push_back(KPvmort1[matches[i].queryIdx].pt);
-		ptosCorrespondenciasvmort2.push_back(KPvmort2[matches[i].trainIdx].pt);
+		ptosCorrespondenciasvmort2.push_back(KPvmort2[matches[i].trainIdx].pt);	
 	}
-
+	
 	//Calculamos la matriz fundamental:
 	vector<unsigned char> buenos_malos;
 	Mat F = findFundamentalMat(ptosCorrespondenciasvmort1, ptosCorrespondenciasvmort2, CV_FM_8POINT+CV_FM_RANSAC,1,0.99, buenos_malos);
 	cout << "Se ha estimado la matriz fundamental y es:" << endl;
 	mostrarMatriz(F);
-
+	
 	int numero_descartes = 0;
-
+	
+	//Vemos cuantas parejas de puntos en correspondencias han sido descartadas por RANSAC
 	for (int i = 0; i < buenos_malos.size(); i++)
 		if (buenos_malos.at(i) == 0)
 			numero_descartes++;
-
+		
 	cout << "RANSAC ha descartado: " << numero_descartes << " parejas en correspondencias." << endl;
-
+	
+	//Calculamos las lineas epipolares para los puntos de cada imagen
 	vector<Vec3f> lineas_para_vmort1, lineas_para_vmort2;
 	computeCorrespondEpilines(ptosCorrespondenciasvmort1, 1, F, lineas_para_vmort1);
 	computeCorrespondEpilines(ptosCorrespondenciasvmort2, 2, F, lineas_para_vmort2);
-
-	cout << "Se han obtenido: " << lineas_para_vmort1.size() << "lineas epipolares" << endl;
+	
 	Vec3f l;
+	int pintadas = 0;
 	double c = vmort2.cols;
-
+	
 	//Dibujamos las lineas epipolares evaluandolas en x = 0 y x = num_columnas_imagen
-	for (int i = 0; i < lineas_para_vmort1.size(); i++) {
+	for (int i = 0; i < lineas_para_vmort1.size() and pintadas <= 200; i++) {
 		if (buenos_malos.at(i) == 1) {
 			l = lineas_para_vmort1.at(i);
 			line(vmort2, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));
-		}
+			pintadas++;
+		}	
 	}
-
+	
 	c = vmort1.cols;
-
-	for (int i = 0; i < lineas_para_vmort2.size(); i++) {
+	pintadas = 0;
+	
+	for (int i = 0; i < lineas_para_vmort2.size() and pintadas <= 200; i++) {
 		if (buenos_malos.at(i) == 1) {
 			l = lineas_para_vmort2.at(i);
 			line(vmort1, Point(0, -l[2]/l[1]), Point(c, (-l[2]-l[0]*c)/l[1]), CV_RGB(rand() % 256,rand() % 256 ,rand() % 256));
-		}
+			pintadas++;
+		}	
 	}
-
-	imshow("Epipolares de los ptos de Vmort2 sobre Vmort1", vmort1);
+	
+	imshow("Epipolares de los ptos de Vmort2 sobre Vmort1", vmort1);	
 	imshow("Epipolares de los ptos de Vmort1 sobre Vmort2", vmort2);
-
+	
 	Point2f p;
 	//Calculamos el error como las distancia promedio de las lineas epipolares a sus puntos de soporte
 	double error1 = 0;
@@ -466,37 +541,103 @@ void parte3() {
 			p = ptosCorrespondenciasvmort2.at(i);
 			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
 			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
-
+		
 			l = lineas_para_vmort2.at(i);
 			p = ptosCorrespondenciasvmort1.at(i);
 			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
 			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
-
+			
 			dem++;
 		}
 	}
-
+	
 	error1 = error1 / dem;
 	error2 = error2 / dem;
-
+	
 	cout << "El error promedio cometido para las lineas de vmort1 es: " << error1 << endl;
-	cout << "El error promedio cometido para las lineas de vmort2 es: " << error2 << endl;
-
-
+	cout << "El error promedio cometido para las lineas de vmort2 es: " << error2 << endl;	
+		
+	
 	waitKey(0);
 	destroyAllWindows();
 
 }
 
+/*
+Funcion que estima la matriz fundamental entre dadas dos imagenes
+@im1 y @im2 son las imagenes
+@umbral el umbral para BRISK
+@corresp_1 y @corresp_2 vectores donde se devolveran los puntos en correspondencias calculados en ambas imagenes
+*/
+Mat estimarF (Mat im1, Mat im2, int umbral, vector<Point2f> &corresp_1, vector<Point2f> &corresp_2) {
+	vector<KeyPoint> KPim1 = obtenerKeyPoints(im1, umbral);
+	vector<KeyPoint> KPim2 = obtenerKeyPoints(im2, umbral);
+	vector<DMatch> matches = obtenerMatches(im1, im2, umbral);
+	
+	//Construimos los vectores de ptos en correspondencias para el calculo de F
+	vector<Point2f> ptos_corresp_1, ptos_corresp_2;
+	
+	for (int i = 0; i < matches.size(); i++) {
+		ptos_corresp_1.push_back(KPim1[matches[i].queryIdx].pt);
+		ptos_corresp_2.push_back(KPim2[matches[i].trainIdx].pt);
+	}
+	
+	//Calculamos la matriz fundamental:
+	vector <unsigned char> buenos_malos; //vector donde se marca que parejas han sido rechazadas por RANSAC
+	Mat F = findFundamentalMat(ptos_corresp_1, ptos_corresp_2, CV_FM_8POINT + CV_FM_RANSAC, 1, 0.99, buenos_malos);
+	
+	//Calculamos las lineas epipolares para ambas imagenes
+	vector<Vec3f> lineas_para_1, lineas_para_2;
+	computeCorrespondEpilines(ptos_corresp_1, 1, F, lineas_para_1);
+	computeCorrespondEpilines(ptos_corresp_2, 2, F, lineas_para_2);
+	
+	//Calculamos el error de la estimacion
+	double error1 = 0;
+	double error2 = 0;
+	int dem = 0;
+	Vec3f l;
+	Point2f p;
+	for (int i = 0; i < lineas_para_1.size(); i++) {
+		if (buenos_malos.at(i) == 1) {
+			l = lineas_para_1.at(i);
+			p = ptos_corresp_2.at(i);
+			corresp_2.push_back(p);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error1 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+		
+			l = lineas_para_2.at(i);
+			p = ptos_corresp_1.at(i);
+			corresp_1.push_back(p);
+			//cout << abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]) << " ";
+			error2 += abs(l[0]*p.x + l[1]*p.y + l[2]) / sqrt(l[0]*l[0]+l[1]*l[1]);
+			
+			dem++;
+		}
+	}
+	
+	error1 = error1 / dem;
+	error2 = error2 / dem;
+	
+	cout << "El error promedio cometido para las lineas de 1 es: " << error1 << endl;
+	cout << "El error promedio cometido para las lineas de 2 es: " << error2 << endl;	
+	
+	
+	
+	return F;
+}
+
 //Funcion donde se estructuran los pasos necesarios para el cuarto punto de la practica
 void parte4() {
 	//Cargamos las imagenes
-	Mat im0 = imread("imagenes/reconstruccion/rdimage.000.ppm");
-	Mat im1 = imread("imagenes/reconstruccion/rdimage.001.ppm");
-	Mat im4 = imread("imagenes/reconstruccion/rdimage.004.ppm");
+	Mat im0 = imread("imagenes/rdimage.000.ppm");
+	Mat im1 = imread("imagenes/rdimage.001.ppm");
+	Mat im4 = imread("imagenes/rdimage.004.ppm");
+	
+	//Recuperamos los puntos en correspondencias que se han usado en la estimacion de F
+	vector<Point2f> corresp_1, corresp_2;
 
-	Mat F = estimarF(im0, im1, 50);
-
+	Mat F = estimarF(im4, im1, 50, corresp_1, corresp_2);
+	
 	cout << "Se ha calculado la matriz fundamental y es: " << endl;
 	mostrarMatriz(F);
 	//cout << "El tipo de la matriz F es: " << F.type() << endl;
@@ -517,71 +658,210 @@ void parte4() {
 	//Estimamos la matriz esencial:
 	Mat E1 = K.t() * F;
 	Mat E = E1 * K;
-	Mat menos_E = -E;
-
+	
 	cout << "Hemos estimado E: " << endl;
 	mostrarMatriz(E);
-	cout << "Y la -E es: " << endl;
-	mostrarMatriz(menos_E);
-
-	cout << "E por Etraspuesta: " << endl;
+	
 	Mat EEt = E*E.t();
-	mostrarMatriz(EEt);
-
+	
 	double traza = 0.0;
-
 	for (int i = 0; i < 3; i++)
 		traza += EEt.at<double>(i,i);
 
 	cout << "Traza de EEtrapuesta: " << traza << endl;
+	
+	Mat E_norm = E / sqrt(traza/2);
 
-	double dividendo = traza/2;
-	Mat EEt_norm = EEt / dividendo;
+	Mat EEt_norm = E_norm * E_norm.t();
+	
 
 	cout << "EEtrapuesta normalizada: " << endl;
 	mostrarMatriz(EEt_norm);
-
-	double T[3];
+	
+	Mat T = Mat(1,3, CV_64F);
+	Mat menos_T = Mat(1,3, CV_64F);
 	int fila_donde_despejar;
-
+	
+	//Despejamos T de la fila de EEt_norm con el elemento de la diagonal mas pequeño
 	double elem = EEt_norm.at<double>(0,0);
 	for (int i = 0; i < 3; i++)
-		if EEt_norm.at<double>(i,i) <= elem {
+		if (EEt_norm.at<double>(i,i) <= elem) {
 			fila_donde_despejar = i;
 			elem = EEt_norm.at<double>(i,i);
 		}
 
-	T[fila_donde_despejar] = sqrt(1-elem);
-	T[(fila_donde_despejar+1)%3] = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+1)%3) / T[fila_donde_despejar];
-	T[(fila_donde_despejar+2)%3] = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+2)%3) / T[fila_donde_despejar];
-
-	cout << "T_x: " << T[0] << endl;
-	cout << "T_y: " << T[1] << endl;
-	cout << "T_z: " << T[2] << endl;
-
-	cout << "Norma de T gorro: " << sqrt(T[0]*T[0]+T[1]*T[1]+T[2]*T[2]) << endl;
-
-
+	T.at<double>(0, fila_donde_despejar) = sqrt(1-elem);
+	T.at<double>(0,(fila_donde_despejar+1)%3) = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+1)%3) / sqrt(1-elem);
+	T.at<double>(0,(fila_donde_despejar+2)%3) = -EEt_norm.at<double>(fila_donde_despejar, (fila_donde_despejar+2)%3) / sqrt(1-elem);
+	
+	menos_T.at<double>(0,0) = -T.at<double>(0,0);
+	menos_T.at<double>(0,1) = -T.at<double>(0,1);
+	menos_T.at<double>(0,2) = -T.at<double>(0,2);
+	
+	
+	//Construimos las rotaciones:
+	Mat menos_E_norm = -E_norm;
+	//mostrarMatriz(menos_T);
+	Mat R_E_T = Mat(3,3,CV_64F);
+	Mat R_E_menosT = Mat(3,3,CV_64F);
+	Mat R_menosE_T = Mat(3,3,CV_64F);
+	Mat R_menosE_menosT = Mat(3,3,CV_64F);
+	
+	Mat w0 = Mat(1,3, CV_64F);
+	Mat w1 = Mat(1,3, CV_64F);
+	Mat w2 = Mat(1,3, CV_64F);
+	
+	Mat R0 = Mat(1,3, CV_64F);
+	Mat R1 = Mat(1,3, CV_64F);
+	Mat R2 = Mat(1,3, CV_64F);
+	
+	(E_norm.row(0).cross(T)).copyTo(w0);
+	(E_norm.row(1).cross(T)).copyTo(w1);
+	(E_norm.row(2).cross(T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_E_T.row(0));
+	(R1).copyTo(R_E_T.row(1));
+	(R2).copyTo(R_E_T.row(2));
+	
+	(E_norm.row(0).cross(menos_T)).copyTo(w0);
+	(E_norm.row(1).cross(menos_T)).copyTo(w1);
+	(E_norm.row(2).cross(menos_T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_E_menosT.row(0));
+	(R1).copyTo(R_E_menosT.row(1));
+	(R2).copyTo(R_E_menosT.row(2));
+	
+	(menos_E_norm.row(0).cross(T)).copyTo(w0);
+	(menos_E_norm.row(1).cross(T)).copyTo(w1);
+	(menos_E_norm.row(2).cross(T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_menosE_T.row(0));
+	(R1).copyTo(R_menosE_T.row(1));
+	(R2).copyTo(R_menosE_T.row(2));
+	
+	(menos_E_norm.row(0).cross(menos_T)).copyTo(w0);
+	(menos_E_norm.row(1).cross(menos_T)).copyTo(w1);
+	(menos_E_norm.row(2).cross(menos_T)).copyTo(w2);
+	
+	R0 = w0+w1.cross(w2);
+	R1 = w1+w2.cross(w0);
+	R2 = w2+w0.cross(w1);
+	
+	(R0).copyTo(R_menosE_menosT.row(0));
+	(R1).copyTo(R_menosE_menosT.row(1));
+	(R2).copyTo(R_menosE_menosT.row(2));
+	
+	cout << "La rotacion para E y T:" << endl;
+	mostrarMatriz(R_E_T);
+	
+	cout << "La rotacion para E y -T:" << endl;
+	mostrarMatriz(R_E_menosT);
+	
+	cout << "La rotacion para -E y T:" << endl;
+	mostrarMatriz(R_menosE_T);
+	
+	cout << "La rotacion para -E y -T:" << endl;
+	mostrarMatriz(R_menosE_menosT);
+	
+	vector<Mat> Rs;
+	Rs.push_back(R_E_T);
+	Rs.push_back(R_E_menosT);
+	Rs.push_back(R_menosE_T);
+	Rs.push_back(R_menosE_menosT);
+	
+	//Obtenemos la distancia focal en pixels de la matriz de calibracion K:
+	double f = K.at<double>(0,0);
+	
+	
+	int num_corresp = corresp_1.size();
+	double dot1, dot2, Zi, Zd;
+	Mat pi = Mat(1,3,CV_64F);
+	Mat Pi = Mat(1,3,CV_64F);
+	pi.at<double>(0,2) = 1.0;
+	
+	int R_act = 0;
+	Mat R = Rs.at(R_act);
+	Mat T_act = Mat(1,3,CV_64F);
+	T.copyTo(T_act);
+	
+	int contador = 0;
+	bool encontrado = false;
+	bool cambio;
+	
+	//Vemos que combinacion es la adecuada
+	while (!encontrado) {
+		cambio = false;
+				
+		for (int i = 0; i < corresp_1.size() and !cambio and !encontrado; i++) {
+			//Calculamos Zi y Zd
+			pi.at<double>(0,0) = corresp_1.at(i).x;
+			pi.at<double>(0,1) = corresp_1.at(i).y;
+			
+			dot1 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(T_act);
+			dot2 = (f*R.row(0) - corresp_2.at(i).x*R.row(2)).dot(pi);
+			
+			Zi = f*dot1/dot2;
+			 
+			Pi = (Zi/f)*pi;
+		
+			Zd = R.row(2).dot(Pi-T_act);
+			
+			//Si ambos negativos cambiamos el signo a T
+			if (Zi < 0 and Zd < 0) {
+				T_act = -T_act;
+				
+				if (R_act%2 == 0)
+					R_act++;
+				else
+					R_act--;
+					
+				R = Rs.at(R_act);
+				cambio = true;
+			}
+			//Si tienen signos distintos cambiamos de signo a la E
+			else if (Zi*Zd < 0){
+				R_act = (R_act+2)%4;
+				R = Rs.at(R_act);
+				cambio = true;
+			}
+			//Si los dos positivos, hemos acabado.
+			else
+				encontrado = true;					
+		}
+	}
+	
+	cout << "La R es:" << endl;
+	mostrarMatriz(R);
+	cout << "Y T: " << endl;
+	mostrarMatriz(T_act);		
 
 	waitKey(0);
 	destroyAllWindows();
-
-
-
-
 }
 
 
 int main() {
 	cout << "*****************************\nPARTE 1: ESTIMACION DE CAMARA\n*****************************" << endl;
-	//parte1();
+	parte1();
 
 	cout << "********************\nPARTE 2: CALIBRACION\n********************" << endl;
-	//parte2();
-
+	parte2();
+	
 	cout << "************************\nPARTE 3: ESTIMACION DE F\n************************" << endl;
-	//parte3();
-
+	parte3();
+	
 	cout << "*********************************\nPARTE 4: ESTIMACION DE MOVIMIENTO\n*********************************" << endl;
 	parte4();
 }
