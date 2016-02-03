@@ -256,6 +256,22 @@ vector<Mat> CombineLaplacianPyramids(vector<Mat> laplacianPyramidA,
 	return combinedPyramids;
 }
 
+Mat restoreImagenFromLP (vector<Mat> laplacian_pyramid) {
+	Mat reconstruction;
+	
+	int levels_num = laplacian_pyramid.size();
+	reconstruction = laplacian_pyramid.at(levels_num-1);
+	
+	for (int i = laplacian_pyramid.size() - 2; i >= 0; i--)
+		reconstruction = laplacian_pyramid.at(i) + expand(reconstruction, laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols);
+		
+		
+	return reconstruction;
+
+
+
+}
+
 Mat BurtAdelsonGray(Mat imageA, Mat imageB, Mat mask){
 	vector<Mat> laplacianPyramidA = computeLaplacianPyramid(imageA);
 	vector<Mat> laplacianPyramidB = computeLaplacianPyramid(imageB);
@@ -332,21 +348,30 @@ int main(int argc, char* argv[]){
 	image.convertTo(image, CV_32F);
 	
 	vector<Mat> gaussianPyramid = computeGaussianPyramid(image);
-	
+	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
 	/*for (int i = 0; i < 5; i++){
 		gaussianPyramid.at(i).convertTo(gaussianPyramid.at(i),CV_8U);
 		imshow("Un nivel", gaussianPyramid.at(i));
 	}*/
 	
-	Mat level = gaussianPyramid.at(2);
+	/*Mat level = gaussianPyramid.at(2);
 	level.convertTo(level, CV_8U);
 	
-	imshow("Level", level);
+	imshow("Level", level);*/
+	/*cout << "Niveles de la piramide laplaciana: " << laplacianPyramid.size() << endl;
+	cout << "Niveles de la piramide gaussiana: " << gaussianPyramid.size() << endl;
 	
-	cout << "Este nivel tiene: " << level.rows << "x" << level.cols << endl;
+	Mat level = laplacianPyramid.at(1);
+	level.convertTo(level, CV_8U);
+	
+	imshow("Level de laplaciana", level);*/
+	
+	Mat reconstruction = restoreImagenFromLP(laplacianPyramid);
+	reconstruction.convertTo(reconstruction, CV_8U);
+	
+	cout << "La reconstruccion tiene dimensiones" << reconstruction.rows << "x" << reconstruction.cols << endl;
+	imshow("Reconstruccion",reconstruction);
 		
-	
-	
 
 
 	/*
