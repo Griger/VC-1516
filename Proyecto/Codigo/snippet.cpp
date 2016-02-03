@@ -101,7 +101,7 @@ Mat subSample1C(Mat &im) {
 
 	for (int i = 0; i < subsample.rows; i++)
 		for (int j = 0; j < subsample.cols; j++)
-			subsample.at<float>(i, j) = im.at<float>(i*2+1, j*2+1);
+			subsample.at<float>(i, j) = im.at<float>(i*2, j*2);
 
 	return subsample;
 }
@@ -185,17 +185,16 @@ float getExpansionValue (int i, int j, Mat prev_level) {
 /*
 Funcion que realiza la operacion de expansion sobre una matriz
 @im: la matriz a expandir
+@result_rows: filas que tiene el siguiente nivel de la laplaciana
+@result_cols: columnas que tiene el siguiente nivel de la laplaciana
 */
-Mat expand (Mat im) {
-	int exp_rows = (im.rows%2 == 0) ? im.rows*2 : im.rows*2 - 1;
-	int exp_cols = (im.cols%2 == 0) ? im.cols*2 : im.cols*2 - 1;
-
+Mat expand (Mat im, int result_rows, int result_cols) {
 
 	Mat edged_im = getEdgedMat1C(im);
-	Mat expansion = Mat::zeros(exp_rows, exp_cols, CV_32F);
+	Mat expansion = Mat::zeros(result_rows, result_cols, CV_32F);
 
-	for (int i = 0; i < exp_rows; i++)
-		for (int j = 0; j < exp_cols; j++)
+	for (int i = 0; i < result_rows; i++)
+		for (int j = 0; j < result_cols; j++)
 			expansion.at<float>(i,j) = getExpansionValue(i,j, edged_im);
 
 	return expansion;
@@ -209,7 +208,7 @@ vector<Mat> computeLaplacianPyramid(Mat image){
 
 	for (int i = 0; i < gaussianPyramid.size(); i++){
 		if(i < gaussianPyramid.size() - 1)
-			actualLevelMatrix = gaussianPyramid.at(i) - expand(gaussianPyramid.at(i+1));
+			actualLevelMatrix = gaussianPyramid.at(i) - expand(gaussianPyramid.at(i+1), gaussianPyramid.at(i).rows, gaussianPyramid.at(i).cols);
 		else
 			actualLevelMatrix = gaussianPyramid.at(i);
 
