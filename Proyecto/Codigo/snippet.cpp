@@ -196,7 +196,7 @@ Mat expand (Mat im) {
 
 	for (int i = 0; i < exp_rows; i++)
 		for (int j = 0; j < exp_cols; j++)
-			expansion.at<float>(i,j) = getExpansionValue(i,j, im);
+			expansion.at<float>(i,j) = getExpansionValue(i,j, edged_im);
 
 	return expansion;
 }
