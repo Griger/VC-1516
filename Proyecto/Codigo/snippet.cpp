@@ -129,7 +129,29 @@ Funcion que orla la matriz para poder hacer la operacion expand
 @im: la matriz a orlar
 */
 Mat getEdgedMat1C (Mat im) {
-	
+	Mat edged_mat = Mat::zeros(im.rows+2, im.cols+2, im.type());
+
+	//Copiamos im dentro de la nueva matriz dejando el borde
+	for (int i = 1; i < edged_mat.rows - 1; i++)
+		for (int j = 1; j < edged_mat.cols - 1 ; j++)
+			edged_mat.at<float>(i,j) = im.at<float>(i-1, j-1);
+
+	for (int i = 0; i < edged_mat.rows; i++) {
+		edged_mat.at<float>(i, 0) = 2*edged_mat.at<float>(i, 1) - edged_mat.at<float>(i, 2);
+		edged_mat.at<float>(i, edged_mat.cols - 1) = 2*edged_mat.at<float>(i, edged_mat.cols -2) - 2*edged_mat.at<float>(i, edged_mat.cols -3);
+	}
+
+	for (int j = 0; j < edged_mat.cols; i++) {
+		edged_mat.at<float>(0, j) = 2*edged_mat.at<float>(1, j) - edged_mat.at<float>(2, j);
+		edged_mat.at<float>(edged_mat.rows - 1, j) = 2*edged_mat.at<float>(edged_mat.rows - 2, j) - 2*edged_mat.at<float>(edged_mat.rows - 3, j);
+	}
+
+	edged_mat.at<float>(0,0) = 2*edged_mat.at<float>(1, 1) - edged_mat.at<float>(2, 2);
+	edged_mat.at<float>(0,edged_mat.cols - 1) = 2*edged_mat.at<float>(1, edged_mat.cols - 2) - edged_mat.at<float>(2, edged_mat.cols - 3);
+	edged_mat.at<float>(edged_mat.rows - 1,0) = 2*edged_mat.at<float>(edged_mat.rows - 2, 1) - edged_mat.at<float>(edged_mat.rows - 3, 2);
+	edged_mat.at<float>(edged_mat.rows - 1, edged_mat.cols - 1) = 2*edged_mat.at<float>(edged_mat.rows - 2, edged_mat.cols - 2) - edged_mat.at<float>(edged_mat.rows - 3, edged_mat.cols - 3);
+
+	return edged_mat;
 }
 
 /*
