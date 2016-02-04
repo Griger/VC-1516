@@ -9,7 +9,7 @@ using namespace cv;
 Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion lineal.
 */
 float rankChange(float t, float a, float b, float c, float d) {
-	return 1.0 * (t - a) / (b - a)*(d - c) + c;	
+	return 1.0 * (t - a) / (b - a)*(d - c) + c;
 }
 
 /*
@@ -235,8 +235,8 @@ float getExpansionValue (int i, int j, Mat prev_level) {
 
 	for (int m = -2; m <= 2; m++)
 		for (int n = -2; n <= 2; n++)
-			if ( (i-m)%2 == 0 && (j-n)%2 == 0 )
-				sum += w(m,n)*prev_level.at<float>((i-m)/2, (j-n)/2);
+			if ( (i-m+1)%2 == 0 && (j-n+1)%2 == 0 )
+				sum += w(m,n)*prev_level.at<float>((i-m+1)/2, (j-n+1)/2);
 
 	return 4*sum;
 }
@@ -306,11 +306,11 @@ Mat restoreImageFromLP (vector<Mat> laplacian_pyramid) {
 		reconstructions.push_back(laplacian_pyramid.at(i) + expand(reconstructions.at(levels_num-2-i), laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols));
 
 	/*for (int i = 0; i < 3; i++) {
-		laplacian_pyramid.at(i).convertTo(laplacian_pyramid.at(i), CV_8U);		
+		laplacian_pyramid.at(i).convertTo(laplacian_pyramid.at(i), CV_8U);
 		imshow("LP"+to_string(i), laplacian_pyramid.at(i));
-		
+
 	}*/
-	
+
 	/*
 	for (int i = 3; i < 6; i++) {
 		reconstructions.at(i).convertTo(reconstructions.at(i), CV_8U);
@@ -342,7 +342,7 @@ Mat BurtAdelson(Mat imageA, Mat imageB, Mat mask){
 	Mat channelsA[3];
 	Mat channelsB[3];
 	Mat sol_channels[3];
-	
+
 	if (imageA.channels() == 1)
 		solution = BurtAdelsonGray(imageA,imageB, mask);
 	else if (imageA.channels() == 3){
@@ -436,15 +436,15 @@ int main(int argc, char* argv[]){
 	//EJEMPLO PARA PROBAR TRASLACION
 	Mat mosaic1 = imread("imagenes/mosaic1.png", 0);
 	Mat mosaic2 = imread("imagenes/mosaic2.png", 0);
-	
+
 	//imshow("Mosaic1", mosaic1);
 	//imshow("Mosaic2", mosaic2);
 	cout << "Las columnas de mosaic1 son: " << mosaic1.cols << endl;
 	cout << "La traslacion es: " << getTraslation(mosaic1, mosaic2) << endl;
-	
-	
+
+
 	//EJEMPLO PARA VER CILINDRICAS Y ESFERICAS
-	
+
 	/*Mat imagen_cilindro, imagen_esfera;
 	imagen_cilindro = curvar_cilindro(imagen,500,500);
 	imagen_esfera = curvar_esfera(imagen,500,500);
@@ -453,7 +453,7 @@ int main(int argc, char* argv[]){
 	imshow("Normal", imagen);
 	imshow("Imagen cilindro", imagen_cilindro);
 	imshow("Imagen esfera", imagen_esfera);*/
-	
+
 	//EJEMPLO PARA VER SI VA BIEN LAS RECONSTRUCCION O NO
 	/*Mat image = imread("imagenes/Image1.tif", 0);
 	image.convertTo(image, CV_32F);
@@ -461,8 +461,8 @@ int main(int argc, char* argv[]){
 	Mat reconstruction = restoreImageFromLP(laplacianPyramid);
 	reconstruction.convertTo(reconstruction, CV_8U);
 	imshow("Reconstruccion tablero",reconstruction);*/
-	
-	
+
+
 
 	//EJEMPLO PARA PROBAR B-A EN COLOR
 
@@ -492,7 +492,7 @@ int main(int argc, char* argv[]){
 	combination.convertTo(combination, CV_8UC3);
 
 	imshow("combination", combination);*/
-	
+
 	waitKey();
 	destroyAllWindows();
 
