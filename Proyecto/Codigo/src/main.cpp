@@ -8,12 +8,12 @@ using namespace cv;
 //Buqueda de traslacion
 
 
-float distance(image,image2,t){
+float distance(Mat image, Mat image2, int t){
 	float distance = 0;
 	int numPixelUsed = 0;
 
-	for(int col = t, col < image.cols; col++)
-		for(int row = 0; row < image.rows; rows++)
+	for(int col = t; col < image.cols; col++)
+		for(int row = 0; row < image.rows; row++)
 			if(image.at<uchar>(row,col) != 0 && image2.at<uchar>(row,col) != 0){
 				distance += abs(image.at<uchar>(row,col) - image2.at<uchar>(row,col));
 				numPixelUsed++;
@@ -28,11 +28,12 @@ float distance(image,image2,t){
 int getTraslation(Mat &image, Mat &image2){
 	float min = 1000;
 	int traslation = -1;
+	float current_distance;
 
-	for(int t = 0; t < image.cols; i++){
-		distance = distance(image,image2,t);
-		if (distance < min){
-			min = ditance;
+	for(int t = 0; t < image.cols; t++){
+		current_distance = distance(image,image2,t);
+		if (current_distance < min){
+			min = current_distance;
 			traslation = t;
 		}
 	}
@@ -186,15 +187,20 @@ Mat getEdgedMat1C (Mat im) {
 	for (int i = 1; i < edged_mat.rows - 1; i++)
 		for (int j = 1; j < edged_mat.cols - 1 ; j++)
 			edged_mat.at<float>(i,j) = im.at<float>(i-1, j-1);
+			
+	/*cout << "La orlada es: " << endl;
+	Mat orlada;
+	edged_mat.convertTo(orlada, CV_8U);
+	imshow("Orlada", orlada);*/
 
 	for (int i = 0; i < edged_mat.rows; i++) {
 		edged_mat.at<float>(i, 0) = 2*edged_mat.at<float>(i, 1) - edged_mat.at<float>(i, 2);
-		edged_mat.at<float>(i, edged_mat.cols - 1) = 2*edged_mat.at<float>(i, edged_mat.cols -2) - 2*edged_mat.at<float>(i, edged_mat.cols -3);
+		edged_mat.at<float>(i, edged_mat.cols - 1) = 2*edged_mat.at<float>(i, edged_mat.cols -2) - edged_mat.at<float>(i, edged_mat.cols -3);
 	}
 
 	for (int j = 0; j < edged_mat.cols; j++) {
 		edged_mat.at<float>(0, j) = 2*edged_mat.at<float>(1, j) - edged_mat.at<float>(2, j);
-		edged_mat.at<float>(edged_mat.rows - 1, j) = 2*edged_mat.at<float>(edged_mat.rows - 2, j) - 2*edged_mat.at<float>(edged_mat.rows - 3, j);
+		edged_mat.at<float>(edged_mat.rows - 1, j) = 2*edged_mat.at<float>(edged_mat.rows - 2, j) - edged_mat.at<float>(edged_mat.rows - 3, j);
 	}
 
 	edged_mat.at<float>(0,0) = 2*edged_mat.at<float>(1, 1) - edged_mat.at<float>(2, 2);
@@ -272,7 +278,11 @@ vector<Mat> computeLaplacianPyramid(Mat image){
 vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
 									 vector<Mat> laplacian_pyramidB,
 									 vector<Mat> mask_gaussian_pyramid){
-
+									 
+	cout << "Niveles de la LA: " << laplacian_pyramidA.size() << endl;
+	cout << "Niveles de la LB: " << laplacian_pyramidB.size() << endl;
+	cout << "Niveles de la GM: " << mask_gaussian_pyramid.size() << endl;
+	
 	vector<Mat> combined_pyramids;
 	Mat actual_level_matrix;
 
@@ -281,8 +291,7 @@ vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
 
 		for(int i = 0; i < laplacian_pyramidA.at(k).rows; i++)
 			for(int j = 0; j < laplacian_pyramidA.at(k).cols; j++)
-				actual_level_matrix.at<float>(i,j) += laplacian_pyramidA.at(k).at<float>(i,j) * mask_gaussian_pyramid.at(k).at<float>(i,j) +
-												   (1-mask_gaussian_pyramid.at(k).at<float>(i,j)) * laplacian_pyramidB.at(k).at<float>(i,j);
+				actual_level_matrix.at<float>(i,j) += laplacian_pyramidA.at(k).at<float>(i,j) * mask_gaussian_pyramid.at(k).at<float>(i,j) + (1-mask_gaussian_pyramid.at(k).at<float>(i,j)) * laplacian_pyramidB.at(k).at<float>(i,j);
 
 		combined_pyramids.push_back(actual_level_matrix);
 	}
@@ -290,8 +299,12 @@ vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
 	return combined_pyramids;
 }
 
-Mat restoreImagenFromLP (vector<Mat> laplacian_pyramid) {
+Mat restoreImageFromLP (vector<Mat> laplacian_pyramid) {
 	Mat reconstruction;
+	
+	/*Mat level;
+	laplacian_pyramid.at(3).convertTo(level, CV_8U);
+	imshow("Un nivel de la laplaciana", level);*/
 
 	int levels_num = laplacian_pyramid.size();
 	reconstruction = laplacian_pyramid.at(levels_num-1);
@@ -307,16 +320,14 @@ Mat restoreImagenFromLP (vector<Mat> laplacian_pyramid) {
 }
 
 Mat BurtAdelsonGray(Mat imageA, Mat imageB, Mat mask){
-	vector<Mat> laplacianPyramidA = computeLaplacianPyramid(imageA);
-	vector<Mat> laplacianPyramidB = computeLaplacianPyramid(imageB);
-	vector<Mat> gaussianPyramidMask = computeGaussianPyramid(mask);
+	vector<Mat> laplacian_pyramidA = computeLaplacianPyramid(imageA);
+	vector<Mat> laplacian_pyramidB = computeLaplacianPyramid(imageB);
+	vector<Mat> mask_gaussian_pyramid = computeGaussianPyramid(mask);
 
-	vector<Mat> laplacianPyramidSol = CombineLaplacianPyramids(laplacianPyramidA,
-															   laplacianPyramidB,
-														       gaussianPyramidMask);
+	vector<Mat> sol_laplacian_pyramid = combineLaplacianPyramids(laplacian_pyramidA, laplacian_pyramidB, mask_gaussian_pyramid);
 
-	//Mat solution = RestoreImageFromLP(laplacianPyramidSol);
-	Mat solution = Mat(3,3,CV_32F); //lo he puesto para poder seguir compilando
+	Mat solution = restoreImageFromLP(sol_laplacian_pyramid);
+	
 	return solution;
 }
 
@@ -375,32 +386,31 @@ Mat curvar_esfera(Mat im, double f, double s){
 }
 
 int main(int argc, char* argv[]){
-	Mat image = imread("imagenes/Image1.tif", 0);
-
+	/*Mat image = imread("imagenes/Image1.tif", 0);
 	cout << "El numero de canales de la imagen es: " << image.channels() << endl;
 	cout << "La imagen tiene dimensiones: " << image.rows << "x" << image.cols << endl;
 	image.convertTo(image, CV_32F);
 
 	vector<Mat> gaussianPyramid = computeGaussianPyramid(image);
 	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
-	/*for (int i = 0; i < 5; i++){
+	for (int i = 0; i < 5; i++){
 		gaussianPyramid.at(i).convertTo(gaussianPyramid.at(i),CV_8U);
 		imshow("Un nivel", gaussianPyramid.at(i));
-	}*/
+	}
 
-	/*Mat level = gaussianPyramid.at(2);
+	Mat level = gaussianPyramid.at(2);
 	level.convertTo(level, CV_8U);
 
-	imshow("Level", level);*/
-	/*cout << "Niveles de la piramide laplaciana: " << laplacianPyramid.size() << endl;
+	imshow("Level", level);
+	cout << "Niveles de la piramide laplaciana: " << laplacianPyramid.size() << endl;
 	cout << "Niveles de la piramide gaussiana: " << gaussianPyramid.size() << endl;
 
 	Mat level = laplacianPyramid.at(1);
 	level.convertTo(level, CV_8U);
 
-	imshow("Level de laplaciana", level);*/
+	imshow("Level de laplaciana", level);
 
-	Mat reconstruction = restoreImagenFromLP(laplacianPyramid);
+	Mat reconstruction = restoreImageFromLP(laplacianPyramid);
 	reconstruction.convertTo(reconstruction, CV_8U);
 
 	cout << "La reconstruccion tiene dimensiones" << reconstruction.rows << "x" << reconstruction.cols << endl;
@@ -408,7 +418,7 @@ int main(int argc, char* argv[]){
 
 
 
-	/*
+	
 	Mat imagen_cilindro, imagen_esfera;
 	imagen_cilindro = curvar_cilindro(imagen,500,500);
 	imagen_esfera = curvar_esfera(imagen,500,500);
@@ -417,6 +427,45 @@ int main(int argc, char* argv[]){
 	imshow("Normal", imagen);
 	imshow("Imagen cilindro", imagen_cilindro);
 	imshow("Imagen esfera", imagen_esfera);*/
+	
+	Mat image = imread("imagenes/Image1.tif", 0);
+	image.convertTo(image, CV_32F);
+	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
+	Mat reconstruction = restoreImageFromLP(laplacianPyramid);
+	reconstruction.convertTo(reconstruction, CV_8U);
+	imshow("Reconstruccion tablero",reconstruction);
+
+
+	
+	/*Mat apple = imread("imagenes/apple.jpeg",0);
+	Mat orange = imread("imagenes/orange.jpeg",0);
+	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
+	
+	imshow("apple.jpeg", apple);
+	imshow("oragne.jpeg", orange);
+	imshow("mask_apple_orange.png", mask);
+	
+	apple.convertTo(apple, CV_32F);
+	orange.convertTo(orange, CV_32F);
+	mask.convertTo(mask, CV_32F);
+	
+	//getEdgedMat1C(apple);
+	Mat current_mask = Mat(mask.rows, mask.cols, CV_32F);
+	
+	for (int i = 0; i < current_mask.rows; i++)
+		for (int j = 0; j < current_mask.cols; j++)
+			if (mask.at<float>(i,j) == 0)
+				current_mask.at<float>(i,j) = 0.0;
+			else
+				current_mask.at<float>(i,j) = 1.0;
+	
+	Mat combination = BurtAdelsonGray(orange, apple, current_mask);
+	
+	combination.convertTo(combination, CV_8U);
+	
+	imshow("combination", combination);*/
+	
+	
 
 	waitKey();
 	destroyAllWindows();
