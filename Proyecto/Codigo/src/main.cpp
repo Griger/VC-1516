@@ -277,13 +277,7 @@ vector<Mat> computeLaplacianPyramid(Mat image){
 	return solution;
 }
 
-vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
-									 vector<Mat> laplacian_pyramidB,
-									 vector<Mat> mask_gaussian_pyramid){
-
-	cout << "Niveles de la LA: " << laplacian_pyramidA.size() << endl;
-	cout << "Niveles de la LB: " << laplacian_pyramidB.size() << endl;
-	cout << "Niveles de la GM: " << mask_gaussian_pyramid.size() << endl;
+vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA, vector<Mat> laplacian_pyramidB, vector<Mat> mask_gaussian_pyramid){
 
 	vector<Mat> combined_pyramids;
 	Mat actual_level_matrix;
@@ -311,14 +305,17 @@ Mat restoreImageFromLP (vector<Mat> laplacian_pyramid) {
 	for (int i = laplacian_pyramid.size() - 2; i >= 0; i--)
 		reconstructions.push_back(laplacian_pyramid.at(i) + expand(reconstructions.at(levels_num-2-i), laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols));
 
-	/*for (int i = 3; i < laplacian_pyramid.size(); i++) {
-		laplacian_pyramid.at(i).convertTo(laplacian_pyramid.at(i), CV_8U);
-		reconstructions.at(i).convertTo(reconstructions.at(i), CV_8U);
+	/*for (int i = 0; i < 3; i++) {
+		laplacian_pyramid.at(i).convertTo(laplacian_pyramid.at(i), CV_8U);		
 		imshow("LP"+to_string(i), laplacian_pyramid.at(i));
-		imshow("R"+to_string(i), reconstructions.at(i));
-
+		
 	}*/
-
+	
+	/*
+	for (int i = 3; i < 6; i++) {
+		reconstructions.at(i).convertTo(reconstructions.at(i), CV_8U);
+		imshow("R"+to_string(i), reconstructions.at(i));
+	}*/
 
 
 	return reconstructions.at(reconstructions.size()-1);
@@ -339,24 +336,29 @@ Mat BurtAdelsonGray(Mat imageA, Mat imageB, Mat mask){
 	return solution;
 }
 
-/*
+
 Mat BurtAdelson(Mat imageA, Mat imageB, Mat mask){
 	Mat solution;
-
+	Mat channelsA[3];
+	Mat channelsB[3];
+	Mat sol_channels[3];
+	
 	if (imageA.channels() == 1)
 		solution = BurtAdelsonGray(imageA,imageB, mask);
 	else if (imageA.channels() == 3){
-		split
+		split(imageA, channelsA);
+		split(imageB, channelsB);
 
 		for (int i = 0; i < 3; i++)
-			splitedSolution.push_back(BurtAdelsonGray(splitedImageA.at(i),splitedImageB.at(i), mask));
-
-		solution = merge;
+			sol_channels[i] = BurtAdelsonGray(channelsA[i], channelsB[i], mask);
+			merge(sol_channels, 3, solution);
 	}
+	else
+		cout << "Numero de canales no valido" << endl;
 
 	return solution;
 }
-*/
+
 
 void showIm(Mat im) {
 	namedWindow("window", 1);
@@ -394,40 +396,9 @@ Mat curvar_esfera(Mat im, double f, double s){
 }
 
 int main(int argc, char* argv[]){
-	/*Mat image = imread("imagenes/Image1.tif", 0);
-	cout << "El numero de canales de la imagen es: " << image.channels() << endl;
-	cout << "La imagen tiene dimensiones: " << image.rows << "x" << image.cols << endl;
-	image.convertTo(image, CV_32F);
-
-	vector<Mat> gaussianPyramid = computeGaussianPyramid(image);
-	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
-	for (int i = 0; i < 5; i++){
-		gaussianPyramid.at(i).convertTo(gaussianPyramid.at(i),CV_8U);
-		imshow("Un nivel", gaussianPyramid.at(i));
-	}
-
-	Mat level = gaussianPyramid.at(2);
-	level.convertTo(level, CV_8U);
-
-	imshow("Level", level);
-	cout << "Niveles de la piramide laplaciana: " << laplacianPyramid.size() << endl;
-	cout << "Niveles de la piramide gaussiana: " << gaussianPyramid.size() << endl;
-
-	Mat level = laplacianPyramid.at(1);
-	level.convertTo(level, CV_8U);
-
-	imshow("Level de laplaciana", level);
-
-	Mat reconstruction = restoreImageFromLP(laplacianPyramid);
-	reconstruction.convertTo(reconstruction, CV_8U);
-
-	cout << "La reconstruccion tiene dimensiones" << reconstruction.rows << "x" << reconstruction.cols << endl;
-	imshow("Reconstruccion",reconstruction);
-
-
-
-
-	Mat imagen_cilindro, imagen_esfera;
+	//EJEMPLO PARA VER CILINDRICAS Y ESFERICAS
+	
+	/*Mat imagen_cilindro, imagen_esfera;
 	imagen_cilindro = curvar_cilindro(imagen,500,500);
 	imagen_esfera = curvar_esfera(imagen,500,500);
 
@@ -435,43 +406,45 @@ int main(int argc, char* argv[]){
 	imshow("Normal", imagen);
 	imshow("Imagen cilindro", imagen_cilindro);
 	imshow("Imagen esfera", imagen_esfera);*/
-
-	Mat image = imread("imagenes/Image1.tif", 0);
+	
+	//EJEMPLO PARA VER SI VA BIEN LAS RECONSTRUCCION O NO
+	/*Mat image = imread("imagenes/Image1.tif", 0);
 	image.convertTo(image, CV_32F);
 	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
 	Mat reconstruction = restoreImageFromLP(laplacianPyramid);
 	reconstruction.convertTo(reconstruction, CV_8U);
-	imshow("Reconstruccion tablero",reconstruction);
+	imshow("Reconstruccion tablero",reconstruction);*/
+	
+	
 
+	//EJEMPLO PARA PROBAR B-A EN COLOR
 
-
-	/*Mat apple = imread("imagenes/apple.jpeg",0);
-	Mat orange = imread("imagenes/orange.jpeg",0);
+	Mat apple = imread("imagenes/apple.jpeg");
+	Mat orange = imread("imagenes/orange.jpeg");
 	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
 
-	imshow("apple.jpeg", apple);
+	/*imshow("apple.jpeg", apple);
 	imshow("oragne.jpeg", orange);
-	imshow("mask_apple_orange.png", mask);
+	imshow("mask_apple_orange.png", mask);*/
 
-	apple.convertTo(apple, CV_32F);
-	orange.convertTo(orange, CV_32F);
+	apple.convertTo(apple, CV_32FC3);
+	orange.convertTo(orange, CV_32FC3);
 	mask.convertTo(mask, CV_32F);
 
-	//getEdgedMat1C(apple);
 	Mat current_mask = Mat(mask.rows, mask.cols, CV_32F);
 
 	for (int i = 0; i < current_mask.rows; i++)
 		for (int j = 0; j < current_mask.cols; j++)
-			if (mask.at<float>(i,j) == 0)
+			if (mask.at<float>(i,j) < 127)
 				current_mask.at<float>(i,j) = 0.0;
 			else
 				current_mask.at<float>(i,j) = 1.0;
 
-	Mat combination = BurtAdelsonGray(orange, apple, current_mask);
+	Mat combination = BurtAdelson(orange, apple, current_mask);
 
-	combination.convertTo(combination, CV_8U);
+	combination.convertTo(combination, CV_8UC3);
 
-	imshow("combination", combination);*/
+	imshow("combination", combination);
 
 
 
