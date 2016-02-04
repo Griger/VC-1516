@@ -165,12 +165,14 @@ Mat reduce(Mat im){
 vector<Mat> computeGaussianPyramid(Mat image){
 	vector<Mat> gaussianPyramid;
 	Mat actualLevelMatrix = image;
+	Mat copy_actual_level;
 
 	while (5 <= actualLevelMatrix.cols && 5 <= actualLevelMatrix.rows){
 		//cout << "El nivel actual tiene: " << actualLevelMatrix.rows << " filas y " << actualLevelMatrix.cols << " columnas." << endl;
 		gaussianPyramid.push_back(actualLevelMatrix);
+		actualLevelMatrix.copyTo(copy_actual_level);
 		//cout << "Vamos a hacer el reduce: " << endl;
-		actualLevelMatrix = reduce(actualLevelMatrix);
+		actualLevelMatrix = reduce(copy_actual_level);
 	}
 
 	return gaussianPyramid;
@@ -187,7 +189,7 @@ Mat getEdgedMat1C (Mat im) {
 	for (int i = 1; i < edged_mat.rows - 1; i++)
 		for (int j = 1; j < edged_mat.cols - 1 ; j++)
 			edged_mat.at<float>(i,j) = im.at<float>(i-1, j-1);
-			
+
 	/*cout << "La orlada es: " << endl;
 	Mat orlada;
 	edged_mat.convertTo(orlada, CV_8U);
@@ -278,11 +280,11 @@ vector<Mat> computeLaplacianPyramid(Mat image){
 vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
 									 vector<Mat> laplacian_pyramidB,
 									 vector<Mat> mask_gaussian_pyramid){
-									 
+
 	cout << "Niveles de la LA: " << laplacian_pyramidA.size() << endl;
 	cout << "Niveles de la LB: " << laplacian_pyramidB.size() << endl;
 	cout << "Niveles de la GM: " << mask_gaussian_pyramid.size() << endl;
-	
+
 	vector<Mat> combined_pyramids;
 	Mat actual_level_matrix;
 
@@ -302,21 +304,21 @@ vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
 Mat restoreImageFromLP (vector<Mat> laplacian_pyramid) {
 	Mat reconstruction;
 	vector<Mat> reconstructions;
-	
+
 	int levels_num = laplacian_pyramid.size();
 	reconstructions.push_back(laplacian_pyramid.at(levels_num-1));
 
 	for (int i = laplacian_pyramid.size() - 2; i >= 0; i--)
 		reconstructions.push_back(laplacian_pyramid.at(i) + expand(reconstructions.at(levels_num-2-i), laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols));
-		
+
 	/*for (int i = 3; i < laplacian_pyramid.size(); i++) {
 		laplacian_pyramid.at(i).convertTo(laplacian_pyramid.at(i), CV_8U);
 		reconstructions.at(i).convertTo(reconstructions.at(i), CV_8U);
 		imshow("LP"+to_string(i), laplacian_pyramid.at(i));
 		imshow("R"+to_string(i), reconstructions.at(i));
-		
+
 	}*/
-		
+
 
 
 	return reconstructions.at(reconstructions.size()-1);
@@ -333,7 +335,7 @@ Mat BurtAdelsonGray(Mat imageA, Mat imageB, Mat mask){
 	vector<Mat> sol_laplacian_pyramid = combineLaplacianPyramids(laplacian_pyramidA, laplacian_pyramidB, mask_gaussian_pyramid);
 
 	Mat solution = restoreImageFromLP(sol_laplacian_pyramid);
-	
+
 	return solution;
 }
 
@@ -424,7 +426,7 @@ int main(int argc, char* argv[]){
 
 
 
-	
+
 	Mat imagen_cilindro, imagen_esfera;
 	imagen_cilindro = curvar_cilindro(imagen,500,500);
 	imagen_esfera = curvar_esfera(imagen,500,500);
@@ -433,7 +435,7 @@ int main(int argc, char* argv[]){
 	imshow("Normal", imagen);
 	imshow("Imagen cilindro", imagen_cilindro);
 	imshow("Imagen esfera", imagen_esfera);*/
-	
+
 	Mat image = imread("imagenes/Image1.tif", 0);
 	image.convertTo(image, CV_32F);
 	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
@@ -442,36 +444,36 @@ int main(int argc, char* argv[]){
 	imshow("Reconstruccion tablero",reconstruction);
 
 
-	
+
 	/*Mat apple = imread("imagenes/apple.jpeg",0);
 	Mat orange = imread("imagenes/orange.jpeg",0);
 	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
-	
+
 	imshow("apple.jpeg", apple);
 	imshow("oragne.jpeg", orange);
 	imshow("mask_apple_orange.png", mask);
-	
+
 	apple.convertTo(apple, CV_32F);
 	orange.convertTo(orange, CV_32F);
 	mask.convertTo(mask, CV_32F);
-	
+
 	//getEdgedMat1C(apple);
 	Mat current_mask = Mat(mask.rows, mask.cols, CV_32F);
-	
+
 	for (int i = 0; i < current_mask.rows; i++)
 		for (int j = 0; j < current_mask.cols; j++)
 			if (mask.at<float>(i,j) == 0)
 				current_mask.at<float>(i,j) = 0.0;
 			else
 				current_mask.at<float>(i,j) = 1.0;
-	
+
 	Mat combination = BurtAdelsonGray(orange, apple, current_mask);
-	
+
 	combination.convertTo(combination, CV_8U);
-	
+
 	imshow("combination", combination);*/
-	
-	
+
+
 
 	waitKey();
 	destroyAllWindows();
