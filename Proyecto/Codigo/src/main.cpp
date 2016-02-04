@@ -402,10 +402,10 @@ float distance(Mat im1, Mat im2, int t){
 	float distance = 0;
 	int numPixelUsed = 0;
 
-	for(int col = t; col < image.cols; col++)
-		for(int row = 0; row < image.rows; row++)
-			if(image.at<uchar>(row,col) != 0 && image2.at<uchar>(row,col) != 0){
-				distance += abs(image.at<uchar>(row,col) - image2.at<uchar>(row,col));
+	for(int col = t; col < im1.cols; col++)
+		for(int row = 0; row < im1.rows; row++)
+			if(im1.at<uchar>(row,col) != 0 && im2.at<uchar>(row,col) != 0){
+				distance += abs(im1.at<uchar>(row,col) - im2.at<uchar>(row,col));
 				numPixelUsed++;
 			}
 
@@ -420,8 +420,8 @@ int getTraslation1C(Mat &im1, Mat &im2){
 	int traslation = -1;
 	float current_distance;
 
-	for(int t = 0; t < image.cols; t++){
-		current_distance = distance(image,image2,t);
+	for(int t = 0; t < im1.cols; t++){
+		current_distance = distance(im1,im2,t);
 		if (current_distance < min){
 			min = current_distance;
 			traslation = t;
@@ -490,40 +490,79 @@ Funcion que hace un mosaico con dos imagenes
 @im2: la otra imagen para formar el mosaico
 */
 Mat makeMosaic (Mat im1, Mat im2) {
-	int traslation = getTraslation(im1, im2);
+	//int traslation = getTraslation(im1, im2);
+	int traslation = 100;
 
-	Mat expanded_im1 = Mat(im1.rows, im1.cols + traslation, im1.type());
-	Mat expanded_im2 = Mat(im1.rows, im1.cols + traslation, im1.type());
+	Mat expanded_im1 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
+	Mat expanded_im2 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
 	Mat mask = Mat::zeros(expanded_im1.rows, expanded_im1.cols, CV_32F);
-
-	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.cols, im1.rows));
-	Mat expanded_im2_ROI = expanded_im2(Rect(0,traslation, im2.cols, im2.rows));
+	
+	cout << "Las expandidas tienen: " << expanded_im1.rows << " filas y " << expanded_im1.cols << " cols." << endl;
+	
+	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.rows, im1.cols));
+	Mat expanded_im2_ROI = expanded_im2(Rect(traslation-1,0, im2.rows, im2.cols));
 
 	im1.copyTo(expanded_im1_ROI);
 	im2.copyTo(expanded_im2_ROI);
 
 	Mat expanded_im1_gray;
-	expanded_im1.convertTo(expanded_im1_gray, CV_32F);
+	cout << "Voy a convertir el color: " << endl;
+	if (im1.channels() == 3)
+		cvtColor(expanded_im1, expanded_im1_gray, CV_RGB2GRAY);
+	else
+		expanded_im1.copyTo(expanded_im1_gray);
+	
+	cout << "Canales de expanded_im1_gray: " << expanded_im1_gray.channels() << endl;
+	
+	Mat exp;
+	expanded_im1_gray.convertTo(exp, CV_8U);
+	imshow("La expandida de la manzana en gris", exp);
 
 	for (int r = 0; r < mask.rows; r++)
 		for (int c = 0; c < mask.cols; c++)
 			if (expanded_im1_gray.at<float>(r,c) != 0.0)
 				mask.at<float>(r,c) = 1.0;
-
+				
+	Mat mask2 = Mat(mask.rows, mask.cols, mask.type());
+	
+	for (int r = 0; r < mask.rows; r++)
+		for (int c = 0; c < mask.cols; c++)
+			mask2.at<float>(r,c) = 255 *mask.at<float>(r,c);
+			
 	Mat mosaic = BurtAdelson(expanded_im1, expanded_im2, mask);
-
+	
+	Mat una, otra, m;
+	expanded_im1.convertTo(una, CV_8UC3);
+	imshow("Expandida de la manzana", una);
+	expanded_im2.convertTo(otra, CV_8UC3);
+	imshow("Expandidad naranja", otra);
+	mask2.convertTo(m, CV_8U);
+	imshow("La mascara usada", m);
+	
 	return mosaic;
 }
 
 int main(int argc, char* argv[]){
+	//EJEMPLO PARA PROBAR MOSAICO
+	Mat apple = imread("imagenes/apple.jpeg");
+	Mat orange = imread("imagenes/orange.jpeg");
+	
+	orange.convertTo(orange, CV_32FC3);
+	apple.convertTo(apple, CV_32FC3);
+	
+	Mat mosaic = makeMosaic(apple, orange);
+	mosaic.convertTo(mosaic, CV_8UC3);
+	imshow("El mosaico", mosaic);
+	
 	//EJEMPLO PARA PROBAR TRASLACION
-	Mat mosaic1 = imread("imagenes/mosaic1.png", 0);
+	
+	/*Mat mosaic1 = imread("imagenes/mosaic1.png", 0);
 	Mat mosaic2 = imread("imagenes/mosaic2.png", 0);
 
 	//imshow("Mosaic1", mosaic1);
 	//imshow("Mosaic2", mosaic2);
 	cout << "Las columnas de mosaic1 son: " << mosaic1.cols << endl;
-	cout << "La traslacion es: " << getTraslation(mosaic1, mosaic2) << endl;
+	cout << "La traslacion es: " << getTraslation(mosaic1, mosaic2) << endl;*/
 
 
 	//EJEMPLO PARA VER CILINDRICAS Y ESFERICAS
