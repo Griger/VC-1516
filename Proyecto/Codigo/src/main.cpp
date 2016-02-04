@@ -5,41 +5,41 @@
 using namespace std;
 using namespace cv;
 
-//Buqueda de traslacion
-
-
-float distance(Mat image, Mat image2, int t){
-	float distance = 0;
-	int numPixelUsed = 0;
-
-	for(int col = t; col < image.cols; col++)
-		for(int row = 0; row < image.rows; row++)
-			if(image.at<uchar>(row,col) != 0 && image2.at<uchar>(row,col) != 0){
-				distance += abs(image.at<uchar>(row,col) - image2.at<uchar>(row,col));
-				numPixelUsed++;
-			}
-
-	//if(numPixelUsed < pequeño)
-	// 	return ERROR //por considerar muy muy pocos puntos
-
-	return distance/numPixelUsed;
+/*
+Funcion que lleva un @t en el rango [@a, @b] al rango [@c, @d] mediante una transformacion lineal.
+*/
+float rankChange(float t, float a, float b, float c, float d) {
+	return 1.0 * (t - a) / (b - a)*(d - c) + c;	
 }
 
-int getTraslation(Mat &image, Mat &image2){
-	float min = 1000;
-	int traslation = -1;
-	float current_distance;
+/*
+Funcion que reajusta el rango de una matriz al rango [0,255] para que se muestren correctamente las frencuencias altas (tanto negativas como positivas)
+@im: la imagen CV_32F a la que reajustaremos el rango.
+*/
 
-	for(int t = 0; t < image.cols; t++){
-		current_distance = distance(image,image2,t);
-		if (current_distance < min){
-			min = current_distance;
-			traslation = t;
+Mat adjustRank1C(Mat im) {
+	float min = 0;
+	float max = 255;
+	Mat adjusted_im;
+
+
+	//Calculamos el rango en el que se mueven los valores de la imagen.
+	for (int i = 0; i < im.rows; i++)
+		for (int j = 0; j < im.cols; j++) {
+			if (im.at<float>(i, j) < min) min = im.at<float>(i, j);
+			if (im.at<float>(i, j) > max) max = im.at<float>(i, j);
 		}
-	}
 
-	return traslation;
+	im.copyTo(adjusted_im);
+
+	for (int i = 0; i < adjusted_im.rows; i++)
+		for (int j = 0; j < adjusted_im.cols; j++)
+			adjusted_im.at<float>(i, j) = rankChange(adjusted_im.at<float>(i, j), min, max, 0.0, 255.0);
+
+
+	return adjusted_im;
 }
+
 
 /*
 Funcion que devuelve un vector preparado para hacer la convolucion sin problemas en los pixeles cercanos a los bordes, trabajando con imagenes con un solo canal.
@@ -395,7 +395,54 @@ Mat curvar_esfera(Mat im, double f, double s){
 	return imagen_curvada;
 }
 
+//Buqueda de traslacion
+
+
+float distance(Mat image, Mat image2, int t){
+	float distance = 0;
+	int numPixelUsed = 0;
+
+	for(int col = t; col < image.cols; col++)
+		for(int row = 0; row < image.rows; row++)
+			if(image.at<uchar>(row,col) != 0 && image2.at<uchar>(row,col) != 0){
+				distance += abs(image.at<uchar>(row,col) - image2.at<uchar>(row,col));
+				numPixelUsed++;
+			}
+
+	//if(numPixelUsed < pequeño)
+	// 	return ERROR //por considerar muy muy pocos puntos
+
+	return distance/numPixelUsed;
+}
+
+int getTraslation(Mat &image, Mat &image2){
+	float min = 1000;
+	int traslation = -1;
+	float current_distance;
+
+	for(int t = 0; t < image.cols; t++){
+		current_distance = distance(image,image2,t);
+		if (current_distance < min){
+			min = current_distance;
+			traslation = t;
+		}
+	}
+
+	return traslation;
+}
+
+
 int main(int argc, char* argv[]){
+	//EJEMPLO PARA PROBAR TRASLACION
+	Mat mosaic1 = imread("imagenes/mosaic1.png", 0);
+	Mat mosaic2 = imread("imagenes/mosaic2.png", 0);
+	
+	//imshow("Mosaic1", mosaic1);
+	//imshow("Mosaic2", mosaic2);
+	cout << "Las columnas de mosaic1 son: " << mosaic1.cols << endl;
+	cout << "La traslacion es: " << getTraslation(mosaic1, mosaic2) << endl;
+	
+	
 	//EJEMPLO PARA VER CILINDRICAS Y ESFERICAS
 	
 	/*Mat imagen_cilindro, imagen_esfera;
@@ -419,13 +466,13 @@ int main(int argc, char* argv[]){
 
 	//EJEMPLO PARA PROBAR B-A EN COLOR
 
-	Mat apple = imread("imagenes/apple.jpeg");
+	/*Mat apple = imread("imagenes/apple.jpeg");
 	Mat orange = imread("imagenes/orange.jpeg");
 	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
 
-	/*imshow("apple.jpeg", apple);
+	imshow("apple.jpeg", apple);
 	imshow("oragne.jpeg", orange);
-	imshow("mask_apple_orange.png", mask);*/
+	imshow("mask_apple_orange.png", mask);
 
 	apple.convertTo(apple, CV_32FC3);
 	orange.convertTo(orange, CV_32FC3);
@@ -444,10 +491,8 @@ int main(int argc, char* argv[]){
 
 	combination.convertTo(combination, CV_8UC3);
 
-	imshow("combination", combination);
-
-
-
+	imshow("combination", combination);*/
+	
 	waitKey();
 	destroyAllWindows();
 
