@@ -398,7 +398,7 @@ Mat curvar_esfera(Mat im, double f, double s){
 //Buqueda de traslacion
 
 
-float distance(Mat image, Mat image2, int t){
+float distance(Mat im1, Mat im2, int t){
 	float distance = 0;
 	int numPixelUsed = 0;
 
@@ -415,7 +415,7 @@ float distance(Mat image, Mat image2, int t){
 	return distance/numPixelUsed;
 }
 
-int getTraslation(Mat &image, Mat &image2){
+int getTraslation1C(Mat &im1, Mat &im2){
 	float min = 1000;
 	int traslation = -1;
 	float current_distance;
@@ -431,6 +431,89 @@ int getTraslation(Mat &image, Mat &image2){
 	return traslation;
 }
 
+int getTraslation(Mat &im1, Mat &im2) {
+	Mat im1_channels[3];
+	Mat im2_channels[3];
+	int traslation = 0;
+
+	if (im1.channels() == 1)
+		traslation = getTraslation1C(im1, im2);
+	else if (im1.channels() == 3) {
+		split(im1, im1_channels);
+		split(im2, im2_channels);
+
+		for (int i = 0; i < 3; i++)
+			traslation += getTraslation1C(im1_channels[i], im2_channels[i]);
+
+		traslation /= 3; //no estoy tomando decimales
+	}
+	else
+		cout << "Numero de canales no valido" << endl;
+
+	return traslation;
+}
+
+
+/*
+Funcion que hace un mosaico con dos imagenes con un solo canal
+@im1: una de las imagenes que forman el mosaico
+@im2: la otra imagen para formar el mosaico
+
+Mat makeMosaic1C (Mat im1, Mat im2) {
+	int traslation = getTraslation(im1, im2);
+
+	Mat expanded_im1 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
+	Mat expanded_im2 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
+
+	//Expandimos las imagenes
+	for (int r = 0; r < im1.rows; r++)
+		for (int c = 0; c < im1.cols; c++) {
+			expanded_im1.at<float>(r,c) = im1.at<float>(r,c);
+			expanded_im2.at<float>(r, c+traslation) = im2.at<float>(r,c);
+		}
+
+	//Creamos una mascara para B-A
+	Mat mask = Mat::zeros(expanded_im1.rows, expanded_im1.cols, CV_32F);
+
+	for (int r = 0; i < mask.rows; i++)
+		for (int c = 0; c < mask.cols; c++)
+			if (expanded_im1.at<float>(r,c) != 0.0 || expanded_im2.at<float>(r,c) != 0.0)
+				mask.at<float>(r,c) = 1.0;
+
+	return BurtAdelsonGray(expanded_im1, expanded_im2, mask);
+}
+*/
+
+/*
+Funcion que hace un mosaico con dos imagenes
+@im1: una de las imagenes que forman el mosaico
+@im2: la otra imagen para formar el mosaico
+*/
+Mat makeMosaic (Mat im1, Mat im2) {
+	int traslation = getTraslation(im1, im2);
+
+	Mat expanded_im1 = Mat(im1.rows, im1.cols + traslation, im1.type());
+	Mat expanded_im2 = Mat(im1.rows, im1.cols + traslation, im1.type());
+	Mat mask = Mat::zeros(expanded_im1.rows, expanded_im1.cols, CV_32F);
+
+	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.cols, im1.rows));
+	Mat expanded_im2_ROI = expanded_im2(Rect(0,traslation, im2.cols, im2.rows));
+
+	im1.copyTo(expanded_im1_ROI);
+	im2.copyTo(expanded_im2_ROI);
+
+	Mat expanded_im1_gray;
+	expanded_im1.convertTo(expanded_im1_gray, CV_32F);
+
+	for (int r = 0; r < mask.rows; r++)
+		for (int c = 0; c < mask.cols; c++)
+			if (expanded_im1_gray.at<float>(r,c) != 0.0)
+				mask.at<float>(r,c) = 1.0;
+
+	Mat mosaic = BurtAdelson(expanded_im1, expanded_im2, mask);
+
+	return mosaic;
+}
 
 int main(int argc, char* argv[]){
 	//EJEMPLO PARA PROBAR TRASLACION
