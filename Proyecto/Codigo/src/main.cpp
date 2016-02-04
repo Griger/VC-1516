@@ -544,7 +544,7 @@ Mat makeMosaic (Mat im1, Mat im2) {
 
 int main(int argc, char* argv[]){
 	//EJEMPLO PARA PROBAR MOSAICO
-	Mat apple = imread("imagenes/apple.jpeg");
+	/*Mat apple = imread("imagenes/apple.jpeg");
 	Mat orange = imread("imagenes/orange.jpeg");
 	
 	orange.convertTo(orange, CV_32FC3);
@@ -552,7 +552,7 @@ int main(int argc, char* argv[]){
 	
 	Mat mosaic = makeMosaic(apple, orange);
 	mosaic.convertTo(mosaic, CV_8UC3);
-	imshow("El mosaico", mosaic);
+	imshow("El mosaico", mosaic);*/
 	
 	//EJEMPLO PARA PROBAR TRASLACION
 	
@@ -588,12 +588,12 @@ int main(int argc, char* argv[]){
 
 	//EJEMPLO PARA PROBAR B-A EN COLOR
 
-	/*Mat apple = imread("imagenes/apple.jpeg");
+	Mat apple = imread("imagenes/apple.jpeg");
 	Mat orange = imread("imagenes/orange.jpeg");
 	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
 
 	imshow("apple.jpeg", apple);
-	imshow("oragne.jpeg", orange);
+	imshow("orange.jpeg", orange);
 	imshow("mask_apple_orange.png", mask);
 
 	apple.convertTo(apple, CV_32FC3);
@@ -613,7 +613,7 @@ int main(int argc, char* argv[]){
 
 	combination.convertTo(combination, CV_8UC3);
 
-	imshow("combination", combination);*/
+	imshow("combination", combination);
 
 	waitKey();
 	destroyAllWindows();
