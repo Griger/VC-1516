@@ -40,7 +40,6 @@ int getTraslation(Mat &image, Mat &image2){
 	return traslation;
 }
 
-//snippet
 /*
 Funcion que devuelve un vector preparado para hacer la convolucion sin problemas en los pixeles cercanos a los bordes, trabajando con imagenes con un solo canal.
 @signal: vector de entrada al que aplicarle la convolucion.
@@ -270,25 +269,25 @@ vector<Mat> computeLaplacianPyramid(Mat image){
 	return solution;
 }
 
-vector<Mat> CombineLaplacianPyramids(vector<Mat> laplacianPyramidA,
-									 vector<Mat> laplacianPyramidB,
-									 vector<Mat> gaussianPyramidMask){
+vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
+									 vector<Mat> laplacian_pyramidB,
+									 vector<Mat> mask_gaussian_pyramid){
 
-	vector<Mat> combinedPyramids;
-	Mat actualLevelMatrix;
+	vector<Mat> combined_pyramids;
+	Mat actual_level_matrix;
 
-	for (int k = 0; k < laplacianPyramidA.size(); k++){
-		actualLevelMatrix = Mat::zeros(laplacianPyramidA.at(k).rows,laplacianPyramidA.at(k).cols, CV_32F);
+	for (int k = 0; k < laplacian_pyramidA.size(); k++){
+		actual_level_matrix = Mat::zeros(laplacian_pyramidA.at(k).rows,laplacian_pyramidA.at(k).cols, CV_32F);
 
-		for(int i = 0; i < laplacianPyramidA.at(k).rows; i++)
-			for(int j = 0; j < laplacianPyramidA.at(k).cols; j++)
-				actualLevelMatrix.at<float>(j,i) += laplacianPyramidA.at(k).at<float>(j,i) * gaussianPyramidMask.at(k).at<float>(j,i) +
-												   (1-gaussianPyramidMask.at(k).at<float>(j,i)) * laplacianPyramidB.at(k).at<float>(j,i);
+		for(int i = 0; i < laplacian_pyramidA.at(k).rows; i++)
+			for(int j = 0; j < laplacian_pyramidA.at(k).cols; j++)
+				actual_level_matrix.at<float>(i,j) += laplacian_pyramidA.at(k).at<float>(i,j) * mask_gaussian_pyramid.at(k).at<float>(i,j) +
+												   (1-mask_gaussian_pyramid.at(k).at<float>(i,j)) * laplacian_pyramidB.at(k).at<float>(i,j);
 
-		combinedPyramids.push_back(actualLevelMatrix);
+		combined_pyramids.push_back(actual_level_matrix);
 	}
 
-	return combinedPyramids;
+	return combined_pyramids;
 }
 
 Mat restoreImagenFromLP (vector<Mat> laplacian_pyramid) {
