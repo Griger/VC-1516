@@ -5,6 +5,41 @@
 using namespace std;
 using namespace cv;
 
+//Buqueda de traslacion
+
+
+float distance(image,image2,t){
+	float distance = 0;
+	int numPixelUsed = 0;
+
+	for(int col = t, col < image.cols; col++)
+		for(int row = 0; row < image.rows; rows++)
+			if(image.at<uchar>(row,col) != 0 && image2.at<uchar>(row,col) != 0){
+				distance += abs(image.at<uchar>(row,col) - image2.at<uchar>(row,col));
+				numPixelUsed++;
+			}
+
+	//if(numPixelUsed < pequeño)
+	// 	return ERROR //por considerar muy muy pocos puntos
+
+	return distance/numPixelUsed;
+}
+
+int getTraslation(Mat &image, Mat &image2){
+	float min = 1000;
+	int traslation = -1;
+
+	for(int t = 0; t < image.cols; i++){
+		distance = distance(image,image2,t);
+		if (distance < min){
+			min = ditance;
+			traslation = t;
+		}
+	}
+
+	return traslation;
+}
+
 //snippet
 /*
 Funcion que devuelve un vector preparado para hacer la convolucion sin problemas en los pixeles cercanos a los bordes, trabajando con imagenes con un solo canal.
@@ -54,15 +89,15 @@ Mat computeConvolution1CVectors (Mat signal, Mat mask) {
 	Mat edged_copy = getEdged1CVector(signal, mask);
 	Mat edged_copy_segment;
 	Mat convolution = Mat(1, signal.cols, signal.type());
-	
+
 	//cout << "Hemos obtenido ya el vector orlado y tiene " << edged_copy.rows << " filas y " << edged_copy.cols << " columnas"<< endl;
-	
+
 	int copy_start, copy_end, border_side_length;
 	//calculamos el rango de pixeles a los que realmente tenemos que aplicar la convolucion, excluyendo los vectores de orla.
 	copy_start = (mask.cols - 1)/2;
 	copy_end = copy_start + signal.cols;
 	border_side_length = (mask.cols - 1) / 2;
-	
+
 	for (int i = copy_start; i < copy_end; i++) {
 		//Vamos aplicando la convolucion a cada pixel seleccionando el segmento con el que convolucionamos.
 		edged_copy_segment = edged_copy.colRange(i - border_side_length, i + border_side_length + 1);
@@ -85,7 +120,7 @@ Mat convolution2D1C (Mat im) {
 	mask.at<float>(0,4) = 0.05;
 
 	Mat convolution = Mat(im.rows, im.cols, im.type()); //matriz donde introducimos el resultado de la convolucion
-	
+
 	//cout << "Empezamos la convolucion por filas: " << endl;
 	//Convolucion por filas
 	for (int i = 0; i < convolution.rows; i++) {
@@ -94,7 +129,7 @@ Mat convolution2D1C (Mat im) {
 
 	//Convolucion por columnas
 	convolution = convolution.t(); //trasponemos para poder operar como si fuese por filas
-	
+
 	//cout << "Empezamos la convolucion por columnas: " << endl;
 	for (int i = 0; i < convolution.rows; i++) {
 		computeConvolution1CVectors(convolution.row(i), mask).copyTo(convolution.row(i));
@@ -122,7 +157,7 @@ Mat subSample1C(Mat &im) {
 Mat reduce(Mat im){
 	//cout << "Vamos a hacer la convolucion " << endl;
 	Mat convolution = convolution2D1C(im);
-	
+
 	//cout << "Vamos a hacer el submuestreado " << endl;
 	return subSample1C(convolution);
 }
@@ -258,14 +293,14 @@ vector<Mat> CombineLaplacianPyramids(vector<Mat> laplacianPyramidA,
 
 Mat restoreImagenFromLP (vector<Mat> laplacian_pyramid) {
 	Mat reconstruction;
-	
+
 	int levels_num = laplacian_pyramid.size();
 	reconstruction = laplacian_pyramid.at(levels_num-1);
-	
+
 	for (int i = laplacian_pyramid.size() - 2; i >= 0; i--)
 		reconstruction = laplacian_pyramid.at(i) + expand(reconstruction, laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols);
-		
-		
+
+
 	return reconstruction;
 
 
@@ -342,50 +377,50 @@ Mat curvar_esfera(Mat im, double f, double s){
 
 int main(int argc, char* argv[]){
 	Mat image = imread("imagenes/Image1.tif", 0);
-	
+
 	cout << "El numero de canales de la imagen es: " << image.channels() << endl;
 	cout << "La imagen tiene dimensiones: " << image.rows << "x" << image.cols << endl;
 	image.convertTo(image, CV_32F);
-	
+
 	vector<Mat> gaussianPyramid = computeGaussianPyramid(image);
 	vector<Mat> laplacianPyramid = computeLaplacianPyramid(image);
 	/*for (int i = 0; i < 5; i++){
 		gaussianPyramid.at(i).convertTo(gaussianPyramid.at(i),CV_8U);
 		imshow("Un nivel", gaussianPyramid.at(i));
 	}*/
-	
+
 	/*Mat level = gaussianPyramid.at(2);
 	level.convertTo(level, CV_8U);
-	
+
 	imshow("Level", level);*/
 	/*cout << "Niveles de la piramide laplaciana: " << laplacianPyramid.size() << endl;
 	cout << "Niveles de la piramide gaussiana: " << gaussianPyramid.size() << endl;
-	
+
 	Mat level = laplacianPyramid.at(1);
 	level.convertTo(level, CV_8U);
-	
+
 	imshow("Level de laplaciana", level);*/
-	
+
 	Mat reconstruction = restoreImagenFromLP(laplacianPyramid);
 	reconstruction.convertTo(reconstruction, CV_8U);
-	
+
 	cout << "La reconstruccion tiene dimensiones" << reconstruction.rows << "x" << reconstruction.cols << endl;
 	imshow("Reconstruccion",reconstruction);
-		
+
 
 
 	/*
 	Mat imagen_cilindro, imagen_esfera;
 	imagen_cilindro = curvar_cilindro(imagen,500,500);
 	imagen_esfera = curvar_esfera(imagen,500,500);
-	
-	
+
+
 	imshow("Normal", imagen);
 	imshow("Imagen cilindro", imagen_cilindro);
 	imshow("Imagen esfera", imagen_esfera);*/
-	
+
 	waitKey();
 	destroyAllWindows();
-	
+
     return 0;
 }
