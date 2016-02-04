@@ -301,19 +301,25 @@ vector<Mat> combineLaplacianPyramids(vector<Mat> laplacian_pyramidA,
 
 Mat restoreImageFromLP (vector<Mat> laplacian_pyramid) {
 	Mat reconstruction;
+	vector<Mat> reconstructions;
 	
-	/*Mat level;
-	laplacian_pyramid.at(3).convertTo(level, CV_8U);
-	imshow("Un nivel de la laplaciana", level);*/
-
 	int levels_num = laplacian_pyramid.size();
-	reconstruction = laplacian_pyramid.at(levels_num-1);
+	reconstructions.push_back(laplacian_pyramid.at(levels_num-1));
 
 	for (int i = laplacian_pyramid.size() - 2; i >= 0; i--)
-		reconstruction = laplacian_pyramid.at(i) + expand(reconstruction, laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols);
+		reconstructions.push_back(laplacian_pyramid.at(i) + expand(reconstructions.at(levels_num-2-i), laplacian_pyramid.at(i).rows, laplacian_pyramid.at(i).cols));
+		
+	/*for (int i = 3; i < laplacian_pyramid.size(); i++) {
+		laplacian_pyramid.at(i).convertTo(laplacian_pyramid.at(i), CV_8U);
+		reconstructions.at(i).convertTo(reconstructions.at(i), CV_8U);
+		imshow("LP"+to_string(i), laplacian_pyramid.at(i));
+		imshow("R"+to_string(i), reconstructions.at(i));
+		
+	}*/
+		
 
 
-	return reconstruction;
+	return reconstructions.at(reconstructions.size()-1);
 
 
 
