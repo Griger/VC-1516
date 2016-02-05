@@ -374,7 +374,7 @@ Funcion que realiza la proyección cilíndrica de una imagen con un canal
 @s
 */
 Mat cylindrical_proyection1C(Mat im, double f, double s){
-	Mat bent_im = Mat::zeros(im.rows, im.cols, CV_32F);
+	Mat bent_im = Mat::zeros(im.rows, im.cols, CV_8U);
 
 	int center_x = im.cols/2;
 	int center_y = im.rows/2;
@@ -382,7 +382,7 @@ Mat cylindrical_proyection1C(Mat im, double f, double s){
 	for(int i = 0; i < im.rows; i++)
 		for(int j = 0; j < im.cols; j++)
 			bent_im.at<uchar>(floor(s*((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
-								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<float>(i,j);
+								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<uchar>(i,j);
 
 	return bent_im;
 }
@@ -416,7 +416,7 @@ Funcion que realiza la proyeccion esferica de una imagen con un canal
 @s:
 */
 Mat spherical_proyection1C(Mat im, double f, double s){
-	Mat bent_im = Mat::zeros(im.rows, im.cols, CV_32F);
+	Mat bent_im = Mat::zeros(im.rows, im.cols, CV_8U);
 
 	int center_x = im.cols/2;
 	int center_y = im.rows/2;
@@ -424,7 +424,7 @@ Mat spherical_proyection1C(Mat im, double f, double s){
 	for(int i = 0; i < im.rows; i++)
 		for(int j = 0; j < im.cols; j++)
 			bent_im.at<uchar>(floor(s*atan((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
-								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<float>(i,j);
+								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<uchar>(i,j);
 
 	return bent_im;
 }
@@ -622,6 +622,30 @@ Mat obtenerDescriptoresORB (Mat im, int num_caracteristicas = 500, int tipo_marc
 
 	return descriptores;
 }
+vector<DMatch> obtenerMatchesFuerzaBrutaBRISK (Mat im1, Mat im2, int umbral){
+	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
+	Mat descriptores1, descriptores2;
+	vector<DMatch> matches;
+
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	BFMatcher matcher = BFMatcher(NORM_L2, true);
+
+	//Obtenemos los Key Points con BRISK:
+	puntosDetectados1 = obtenerKeyPointsBRISK(im1, umbral);
+	puntosDetectados2 = obtenerKeyPointsBRISK(im2, umbral);
+
+
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresBRISK(im1, umbral);
+	descriptores2 = obtenerDescriptoresBRISK(im2, umbral);
+
+	//clock_t t_inicio= clock();
+	//Calculamos los matches entre ambas imagenes:
+	matcher.match(descriptores1, descriptores2, matches);
+	//printf("FB ha tardado: %.2fs\n",(double)(clock() - t_inicio)/CLOCKS_PER_SEC);
+
+	return matches;
+}
 /*
 Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada + ORB
 @im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
@@ -655,16 +679,30 @@ Mat calcularHomografia (Mat origen, Mat destino) {
 	vector<Point2f> puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino;
 
 	Mat origen_aux;
-	origen.convertTo(origen_aux,CV_8U);
 	Mat destino_aux;
-	destino.convertTo(destino_aux,CV_8U);
-	
-	//Obtenemos los puntos clave con BRISK en cada imagen
-	puntosDetectadosOrigen = obtenerKeyPointsORB(origen_aux, 65);
-	puntosDetectadosDestino = obtenerKeyPointsORB(destino_aux, 65);
+	//cvtColor(origen,origen_aux,CV_RGB2GRAY);
+	//cvtColor(destino,destino_aux,CV_RGB2GRAY);
+	cerr << endl << endl << "VOY A SACAR Origen aux" << endl;
+	//showIm(origen_aux);
+	//Mat destino_aux;
+	origen.convertTo(origen_aux,CV_8UC3);
+	destino.convertTo(destino_aux,CV_8UC3);
+	showIm(origen_aux);
+	showIm(destino_aux);
 
+	//Obtenemos los puntos clave con BRISK en cada imagen
+	Mat keypoint;
+	puntosDetectadosOrigen = obtenerKeyPointsBRISK(origen_aux, 60);
+	drawKeypoints(origen_aux,puntosDetectadosOrigen,keypoint);
+	showIm(keypoint);
+	puntosDetectadosDestino = obtenerKeyPointsBRISK(destino_aux, 60);
+	drawKeypoints(destino_aux,puntosDetectadosDestino,keypoint);
+	showIm(keypoint);
 	//Obtenemos los matches por fuerza bruta:
-	matches = obtenerMatchesFuerzaBrutaORB(origen_aux, destino_aux);
+	matches = obtenerMatchesFuerzaBrutaBRISK(origen_aux, destino_aux,60);
+	cerr <<endl<< "Numero de correspondencias: " << matches.size() << endl << endl;
+	drawMatches(origen_aux, puntosDetectadosOrigen,destino_aux,puntosDetectadosDestino,matches,keypoint);
+	showIm(keypoint);
 	cerr << "Poner en correspondencias"<< endl;
 	//Obtenemos los puntos en correspondencias entre ambas imagenes:
 	for (int i = 0; i < matches.size(); i++){
@@ -695,9 +733,9 @@ Mat makeMosaicOfTwo (Mat im1, Mat im2) {
 	//int side = im1.rows;
 	cerr << "Entramos en el mosaico" << endl;
     //if (side < im1.cols + traslation) side = im1.cols + traslation;
-	int side = 1000;
-    Mat expanded_im1 = Mat::zeros(side, side, im1.type());
-    Mat expanded_im2 = Mat::zeros(side, side, im1.type());
+	int side = 700;
+    Mat expanded_im1 = Mat::zeros(side, side, CV_8UC3);
+    Mat expanded_im2 = Mat::zeros(side, side, CV_8UC3);
 	Mat mask = Mat::zeros(expanded_im1.rows, expanded_im1.cols, CV_32F);
 
 	//Creamos la imagen donde proyectaremos ambas imagenes:
@@ -708,18 +746,20 @@ Mat makeMosaicOfTwo (Mat im1, Mat im2) {
 
 	for (int i = 0; i < 3; i++)
 		id.at<float>(i,i) = 1.0;
+
+	id.at<float>(0,2)= 100;
+	id.at<float>(1,2)= 100;
 	cerr<< "primera proyeccion" << endl;
 	warpPerspective(im1, expanded_im1, id, Size(expanded_im1.cols, expanded_im1.rows), INTER_LINEAR, BORDER_CONSTANT);
+	//showIm(expanded_im1);
 	cerr << "Calculamos homografía" << endl;
 	//Calculamos la homografia que lleva la segunda imagen a la que hemos colocado primero en el plano de proyeccion:
 	Mat homografia = calcularHomografia(im2, im1);
 	cerr << "Segunda proyeccion"<< endl;
 	//Colocamos la segunda imagen por medio de esa homografia (compuesta con la identidad):
-	warpPerspective(im2, expanded_im2, homografia, Size(expanded_im2.cols, expanded_im2.rows), INTER_LINEAR, BORDER_TRANSPARENT);
-
-	Mat aux;
-	expanded_im2.convertTo(aux,CV_8UC3);
-	showIm(aux);
+	homografia = id * homografia;
+	warpPerspective(im2, expanded_im2, homografia, Size(expanded_im2.cols, expanded_im2.rows), INTER_LINEAR, BORDER_CONSTANT);
+	//showIm(expanded_im2);
 
 	//calcular los puntos guay, juntarlos, homografia, y proyectar ambos
 
@@ -754,7 +794,7 @@ Mat makeMosaicOfTwo (Mat im1, Mat im2) {
 		for (int c = 0; c < mask.cols; c++)
 			mask2.at<float>(r,c) = 255 *mask.at<float>(r,c);*/
 
-
+	cerr << "ENTRAMOS EN BA"<<endl<<endl;
 	Mat mosaic = BurtAdelson(expanded_im1, expanded_im2, mask);
 
 	/*Mat una, otra, m;
@@ -865,8 +905,8 @@ int main(int argc, char* argv[]){
 	Mat bent_im1 = cylindrical_proyection(im1, 500, 500);
 	Mat bent_im2 = cylindrical_proyection(im2, 500, 500);
 
-	imshow("im1 curvada", bent_im1);
-	imshow("im2 curvada", bent_im2);
+	showIm(bent_im1);
+	showIm(bent_im2);
 
 	//bent_im1.convertTo(bent_im1, CV_32F);
 	//bent_im2.convertTo(bent_im2, CV_32F);
