@@ -367,37 +367,93 @@ void showIm(Mat im) {
 	//destroyWindow("window");
 }
 
-Mat curvar_cilindro(Mat im, double f, double s){
-	Mat imagen_curvada = Mat::zeros(im.rows, im.cols, CV_8U);
+/*
+Funcion que realiza la proyección cilíndrica de una imagen con un canal
+@im: la imagen a proyectar
+@f
+@s
+*/
+Mat cylindrical_proyection1C(Mat im, double f, double s){
+	Mat bent_im = Mat::zeros(im.rows, im.cols, CV_32F);
 
-	int centro_x = im.cols/2;
-	int centro_y = im.rows/2;
-
-	for(int i = 0; i < im.rows; i++)
-		for(int j = 0; j < im.cols; j++)
-			imagen_curvada.at<uchar>(floor(s*((i-centro_y)/sqrt((j-centro_x)*(j-centro_x)+f*f)) + centro_y),
-								floor(s*atan((j-centro_x)/f) + centro_x) ) = im.at<uchar>(i,j);
-
-	return imagen_curvada;
-}
-
-Mat curvar_esfera(Mat im, double f, double s){
-	Mat imagen_curvada = Mat::zeros(im.rows, im.cols, CV_8U);
-
-	int centro_x = im.cols/2;
-	int centro_y = im.rows/2;
+	int center_x = im.cols/2;
+	int center_y = im.rows/2;
 
 	for(int i = 0; i < im.rows; i++)
 		for(int j = 0; j < im.cols; j++)
-			imagen_curvada.at<uchar>(floor(s*atan((i-centro_y)/sqrt((j-centro_x)*(j-centro_x)+f*f)) + centro_y),
-								floor(s*atan((j-centro_x)/f) + centro_x) ) = im.at<uchar>(i,j);
+			bent_im.at<float>(floor(s*((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
+								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<float>(i,j);
 
-	return imagen_curvada;
+	return bent_im;
 }
 
-//Buqueda de traslacion
+//Funcion que realiza la proyeccion cilindrica de una imagen
+Mat cylindrical_proyection (Mat im, double f, double s) {
+	Mat bent_im = Mat::zeros(im.rows, im.cols, im.type());
+	Mat im_channels[3];
+	Mat bent_im_channels[3];
 
+	if (im.channels() == 1)
+		bent_im = cylindrical_proyection1C(im, f, s);
+	else if (im.channels() == 3) {
+		split(im, im_channels);
 
+		for (int i = 0; i < 3; i++)
+			bent_im_channels[i] = cylindrical_proyection1C(im_channels[i], f, s);
+
+		merge(bent_im_channels, 3, bent_im);
+	}
+	else
+		cout << "Numero de canales no valido" << endl;
+
+	return bent_im;
+}
+
+/*
+Funcion que realiza la proyeccion esferica de una imagen con un canal
+@im: la imagen a proyectar
+@f:
+@s:
+*/
+Mat spherical_proyection1C(Mat im, double f, double s){
+	Mat bent_im = Mat::zeros(im.rows, im.cols, CV_32F);
+
+	int center_x = im.cols/2;
+	int center_y = im.rows/2;
+
+	for(int i = 0; i < im.rows; i++)
+		for(int j = 0; j < im.cols; j++)
+			bent_im.at<float>(floor(s*atan((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
+								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<float>(i,j);
+
+	return bent_im;
+}
+
+//Funcion que realiza la proyeccion esferica de una imagen
+Mat spherical_proyection (Mat im, double f, double s) {
+	Mat bent_im = Mat::zeros(im.rows, im.cols, im.type());
+	Mat im_channels[3];
+	Mat bent_im_channels[3];
+
+	if (im.channels() == 1)
+		bent_im = spherical_proyection1C(im, f, s);
+	else if (im.channels() == 3) {
+		split(im, im_channels);
+
+		for (int i = 0; i < 3; i++)
+			bent_im_channels[i] = spherical_proyection1C(im_channels[i], f, s);
+
+		merge(bent_im_channels, 3, bent_im);
+	}
+	else
+		cout << "Numero de canales no valido" << endl;
+
+	return bent_im;
+}
+
+/*
+Funcion que calcula la distancia entre dos ares de dos imagenes
+*/
 float distance(Mat im1, Mat im2, int t){
 	float distance = 0;
 	int numPixelUsed = 0;
@@ -405,8 +461,8 @@ float distance(Mat im1, Mat im2, int t){
 
 	for(int col = t; col < im1.cols; col++)
 		for(int row = 0; row < im1.rows; row++)
-			if(im1.at<uchar>(row,col) != 0 && im2.at<uchar>(row,col) != 0){
-				distance += abs(im1.at<uchar>(row,col) - im2.at<uchar>(row,col));
+			if(im1.at<float>(row,col) != 0 && im2.at<float>(row,col) != 0){
+				distance += abs(im1.at<float>(row,col) - im2.at<float>(row,col));
 				numPixelUsed++;
 			}
 
@@ -416,6 +472,9 @@ float distance(Mat im1, Mat im2, int t){
 	return distance/numPixelUsed;
 }
 
+/*
+Funcion que calcula la traslacion optima de una imagen1C respecto a otra minimizando un error
+*/
 int getTraslation1C(Mat &im1, Mat &im2){
 	float min = 1000;
 	int traslation = -1;
@@ -432,6 +491,9 @@ int getTraslation1C(Mat &im1, Mat &im2){
 	return traslation;
 }
 
+/*
+Funcion que calcula la traslacion optima de una imagen1C respecto a otra minimizando un error
+*/
 int getTraslation(Mat &im1, Mat &im2) {
 	Mat im1_channels[3];
 	Mat im2_channels[3];
@@ -490,79 +552,89 @@ Funcion que hace un mosaico con dos imagenes
 @im1: una de las imagenes que forman el mosaico
 @im2: la otra imagen para formar el mosaico
 */
-Mat makeMosaic (Mat im1, Mat im2) {
+Mat makeMosaicOfTwo (Mat im1, Mat im2) {
 	int traslation = getTraslation(im1, im2);
-	
-	cout << "im1 tiene dimensiones: " << im1.rows << "x" << im1.cols << endl;
+
+	/*cout << "im1 tiene dimensiones: " << im1.rows << "x" << im1.cols << endl;
 	cout << "im2 tiene dimensiones: " << im2.rows << "x" << im2.cols << endl;
-	cout << "La traslacion calculada es: " << traslation << endl;
-	
+	cout << "La traslacion calculada es: " << traslation << endl;*/
+
 
 	Mat expanded_im1 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
 	Mat expanded_im2 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
 	Mat mask = Mat::zeros(expanded_im1.rows, expanded_im1.cols, CV_32F);
-	
-	cout << "Las expandidas tienen: " << expanded_im1.rows << " filas y " << expanded_im1.cols << " cols." << endl;
-	
-	cout << "Creamos el primer ROI" << endl;
+
+	//cout << "Las expandidas tienen: " << expanded_im1.rows << " filas y " << expanded_im1.cols << " cols." << endl;
+
 	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.cols, im1.rows));
-	cout << "Creamos el segundo ROI" << endl;
 	Mat expanded_im2_ROI = expanded_im2(Rect(traslation-1, 0, im2.cols, im2.rows));
 
 	im1.copyTo(expanded_im1_ROI);
 	im2.copyTo(expanded_im2_ROI);
 
 	Mat expanded_im1_gray;
-	cout << "Voy a convertir el color: " << endl;
 	if (im1.channels() == 3)
 		cvtColor(expanded_im1, expanded_im1_gray, CV_RGB2GRAY);
 	else
 		expanded_im1.copyTo(expanded_im1_gray);
-	
-	cout << "Canales de expanded_im1_gray: " << expanded_im1_gray.channels() << endl;
-	
-	Mat exp;
+
+	/*Mat exp;
 	expanded_im1_gray.convertTo(exp, CV_8U);
-	imshow("La expandida de la manzana en gris", exp);
+	imshow("La expandida de la manzana en gris", exp);*/
 
 	for (int r = 0; r < mask.rows; r++)
 		for (int c = 0; c < mask.cols; c++)
 			if (expanded_im1_gray.at<float>(r,c) != 0.0)
 				mask.at<float>(r,c) = 1.0;
-				
-	Mat mask2 = Mat(mask.rows, mask.cols, mask.type());
-	
+
+	/*Mat mask2 = Mat(mask.rows, mask.cols, mask.type());
+
 	for (int r = 0; r < mask.rows; r++)
 		for (int c = 0; c < mask.cols; c++)
-			mask2.at<float>(r,c) = 255 *mask.at<float>(r,c);
-			
+			mask2.at<float>(r,c) = 255 *mask.at<float>(r,c);*/
+
 	Mat mosaic = BurtAdelson(expanded_im1, expanded_im2, mask);
-	
-	Mat una, otra, m;
+
+	/*Mat una, otra, m;
 	expanded_im1.convertTo(una, CV_8UC3);
-	imshow("Expandida de la manzana", una);
+	imshow("Expandida de im1", una);
 	expanded_im2.convertTo(otra, CV_8UC3);
-	imshow("Expandidad naranja", otra);
+	imshow("Expandidad de im2", otra);
 	mask2.convertTo(m, CV_8U);
-	imshow("La mascara usada", m);
-	
+	imshow("La mascara usada", m);*/
+
 	return mosaic;
+}
+
+/*
+Funcion que hace un mosaico componiendo varias imagenes
+@images: el conjunto de imagenes para el mosaico
+*/
+Mat makeMosaic (vector<Mat> images) {
+	Mat current_mosaic;
+
+	current_mosaic = makeMosaicOfTwo(images.at(0), images.at(1));
+
+	for (int i = 2, i < images.size(); i++)
+		current_mosaic = makeMosaicOfTwo(current_mosaic, images.at(i));
+
+	return current_mosaic;
 }
 
 int main(int argc, char* argv[]){
 	//EJEMPLO PARA PROBAR MOSAICO
 	/*Mat apple = imread("imagenes/apple.jpeg");
 	Mat orange = imread("imagenes/orange.jpeg");
-	
+
 	orange.convertTo(orange, CV_32FC3);
 	apple.convertTo(apple, CV_32FC3);
-	
+
 	Mat mosaic = makeMosaic(apple, orange);
 	mosaic.convertTo(mosaic, CV_8UC3);
 	imshow("El mosaico", mosaic);*/
-	
+
 	//EJEMPLO PARA PROBAR TRASLACION
-	
+
 	/*Mat mosaic1 = imread("imagenes/mosaic1.png", 0);
 	Mat mosaic2 = imread("imagenes/mosaic2.png", 0);
 
@@ -621,26 +693,46 @@ int main(int argc, char* argv[]){
 	combination.convertTo(combination, CV_8UC3);
 
 	imshow("combination", combination);*/
-	
+
 	//EJEMPLO PARA PROBAR B-A + TRASLACION
-	Mat im1 = imread("imagenes/comp3.jpg", 0);
+	/*Mat im1 = imread("imagenes/comp3.jpg", 0);
 	Mat im2 = imread("imagenes/comp4.jpg", 0);
-	
+
 	Mat bent_im1 = curvar_cilindro(im1, 500, 500);
 	Mat bent_im2 = curvar_cilindro(im2, 500, 500);
-	
+
 	imshow("im1 curvada", bent_im1);
 	imshow("im2 curvada", bent_im2);
-	
+
 	bent_im1.convertTo(bent_im1, CV_32F);
 	bent_im2.convertTo(bent_im2, CV_32F);
-	
+
 	Mat mosaic = makeMosaic(bent_im1, bent_im2);
-	
+
 	mosaic.convertTo(mosaic, CV_8U);
-	
+
+	imshow("El mosaico", mosaic);*/
+
+	//EJEMPLO PARA PROBAR MOSAICO DE N imagenes
+	vector<Mat> images;
+	vector<Mat> bent_images;
+
+	for (int i = 1; i <= 6; i++)
+		images.push_back(imread("imagenes/comp"+to_string(i)+".jpg"));
+
+	for (int i = 0; i < images.size(); i++) {
+		images.at(i).convertTo(images.at(i), CV_32FC3);
+		bent_images.push_back(cylindrical_proyection(images.at(i)));
+	}
+
+	Mat mosaic = makeMosaic(bent_images);
+
+	mosaic.convertTo(mosaic, CV_8UC3);
+
 	imshow("El mosaico", mosaic);
-	
+
+
+
 	waitKey();
 	destroyAllWindows();
 
