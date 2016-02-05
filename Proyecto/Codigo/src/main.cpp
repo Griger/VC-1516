@@ -401,6 +401,7 @@ Mat curvar_esfera(Mat im, double f, double s){
 float distance(Mat im1, Mat im2, int t){
 	float distance = 0;
 	int numPixelUsed = 0;
+	int min_pixel_used = 2000;
 
 	for(int col = t; col < im1.cols; col++)
 		for(int row = 0; row < im1.rows; row++)
@@ -409,8 +410,8 @@ float distance(Mat im1, Mat im2, int t){
 				numPixelUsed++;
 			}
 
-	//if(numPixelUsed < pequeño)
-	// 	return ERROR //por considerar muy muy pocos puntos
+	if(numPixelUsed < min_pixel_used)
+		return 10000000000000000000000000000000000000000000000000;
 
 	return distance/numPixelUsed;
 }
@@ -490,8 +491,12 @@ Funcion que hace un mosaico con dos imagenes
 @im2: la otra imagen para formar el mosaico
 */
 Mat makeMosaic (Mat im1, Mat im2) {
-	//int traslation = getTraslation(im1, im2);
-	int traslation = 100;
+	int traslation = getTraslation(im1, im2);
+	
+	cout << "im1 tiene dimensiones: " << im1.rows << "x" << im1.cols << endl;
+	cout << "im2 tiene dimensiones: " << im2.rows << "x" << im2.cols << endl;
+	cout << "La traslacion calculada es: " << traslation << endl;
+	
 
 	Mat expanded_im1 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
 	Mat expanded_im2 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
@@ -499,8 +504,10 @@ Mat makeMosaic (Mat im1, Mat im2) {
 	
 	cout << "Las expandidas tienen: " << expanded_im1.rows << " filas y " << expanded_im1.cols << " cols." << endl;
 	
-	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.rows, im1.cols));
-	Mat expanded_im2_ROI = expanded_im2(Rect(traslation-1,0, im2.rows, im2.cols));
+	cout << "Creamos el primer ROI" << endl;
+	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.cols, im1.rows));
+	cout << "Creamos el segundo ROI" << endl;
+	Mat expanded_im2_ROI = expanded_im2(Rect(traslation-1, 0, im2.cols, im2.rows));
 
 	im1.copyTo(expanded_im1_ROI);
 	im2.copyTo(expanded_im2_ROI);
@@ -588,7 +595,7 @@ int main(int argc, char* argv[]){
 
 	//EJEMPLO PARA PROBAR B-A EN COLOR
 
-	Mat apple = imread("imagenes/apple.jpeg");
+	/*Mat apple = imread("imagenes/apple.jpeg");
 	Mat orange = imread("imagenes/orange.jpeg");
 	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
 
@@ -613,8 +620,27 @@ int main(int argc, char* argv[]){
 
 	combination.convertTo(combination, CV_8UC3);
 
-	imshow("combination", combination);
-
+	imshow("combination", combination);*/
+	
+	//EJEMPLO PARA PROBAR B-A + TRASLACION
+	Mat im1 = imread("imagenes/comp3.jpg", 0);
+	Mat im2 = imread("imagenes/comp4.jpg", 0);
+	
+	Mat bent_im1 = curvar_cilindro(im1, 500, 500);
+	Mat bent_im2 = curvar_cilindro(im2, 500, 500);
+	
+	imshow("im1 curvada", bent_im1);
+	imshow("im2 curvada", bent_im2);
+	
+	bent_im1.convertTo(bent_im1, CV_32F);
+	bent_im2.convertTo(bent_im2, CV_32F);
+	
+	Mat mosaic = makeMosaic(bent_im1, bent_im2);
+	
+	mosaic.convertTo(mosaic, CV_8U);
+	
+	imshow("El mosaico", mosaic);
+	
 	waitKey();
 	destroyAllWindows();
 
