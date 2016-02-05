@@ -12,6 +12,9 @@
 \usepackage{enumerate}
 \usepackage{listings}
 \usepackage{hyperref}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage[export]{adjustbox}
 
 %Configuración para cuando mostremos trozos de codigo:
 \lstset{ %
@@ -51,7 +54,7 @@ Vamos a separar este apartado en los principales problemas resueltos durante el 
 
 \subsection{Proyección cilíndrica o esférica}
 
-La gran mayoría de imágenes, son representadas en un plano. Para conseguir obtener la proyección cilíndrica o esférica de dichas imágenes, tendríamos que ver en que punto del cilíndro o esfera corta la línea que hay entre el punto donde se toma la imagen, y el  punto de la proyección original ---imagen original---.\\
+La gran mayoría de imágenes, son representadas en un plano. Para conseguir obtener la proyección cilíndrica o esférica de dichas imágenes, tendríamos qué ver en que punto del cilíndro o esfera corta la línea que hay entre el punto donde se toma la imagen, y el  punto de la proyección original ---imagen original---.\\
 
 Siendo $ (x_{c}, y_{c})$ el centro de la imagen, f la distancia focal y s el llamado radio del cilindro o esfera, las fórmulas para la obtención de las proyecciones son:
 
@@ -82,7 +85,7 @@ Una vez tenemos las imágenes proyectadas, tenemos que reconocer donde estarán 
 
 Para ello, hay que tener en cuenta que, al realizar una de estas dos proyecciones, un giro en la cámara se traduce en una traslación de las mismas. Por tanto, dentro de todo el espacio de posibles movimientos, vamos a considerar únicamente las traslaciones horizontales.\\
 
-Con este espacio de búsqueda tan reducido, el cálculo del mejor desplazamiento se simplifica mucho. Optaremos por buscar que traslación nos ofrece un menor error medio. Usamos esta medida del error, pues el número de píxeles que se solapan de las dos imágenes es variable, haciendo que otras medidas ---como la suma de los errores--- sean de poca utilidad. Vamos a buscar pixel a pixel, podríamos considerar otras soluciones que nos podrían dar soluciones con precisión subpixel, pero no requerimos de tanta precisión.\\
+Con este espacio de búsqueda tan reducido, el cálculo del mejor desplazamiento se simplifica mucho. Aún así, debido a pequeños problemas de ajuste, preferimos usar BRISK/Fuerza bruta, para obtener un resultado mucho más preciso.\\
 
 Una vez tenemos esto, podríamos simplemente superponer las imágenes. Esto da resultados poco deseables, pues en la imagen obtenida se podían ver claramente una imagen encima de la otra. Para realizar la mezcla de una manera más correcta, utilizamos el algoritmo propuesto por Burt y Adelson.\\
 
@@ -94,9 +97,9 @@ El problema de la mezcla de imágenes, como ya hemos comentado anteriormente, es
 
 Estos efectos depende del tamaño que hayamos seleccionado para la franja central que promediamos. Si la franja es pequeña, se sigue apreciando el borde, aunque suavizado. Si la franja es muy grande, se mezclan los detalles de las dos imágenes, deformando el resultado.\\
 
-La solución propuesta por Burt-Adelson propone realizar una mezcla similar a la comentada anteriormente, pero separando primero las imágenes en diferentes bandas de frecuencias, mezclando las bandas y reconstruyendo la imagen. Esto nos ofrece unas imágenes mucho más convincentes.\\
+La solución propuesta por Burt-Adelson propone realizar una mezcla similar a la comentada anteriormente, pero separando primero las imágenes en diferentes bandas de frecuencias, mezclando las bandas y reconstruyendo la imagen. Esto nos ofrece unas imágenes mucho más convincentes ya que al tener imágenes con un espacio de frecuencias menor el tamaño de la banda usada es más adecuado.\\
 
-Además, vamos a realizar una versión del algoritmo que permite realizar la mezcla utilizando una máscara para seleccionar que píxeles queremos de cada imagen.\\
+Además, vamos a realizar una versión del algoritmo que permite realizar la mezcla utilizando una máscara para seleccionar qué píxeles queremos de cada imagen.\\
 
 \subsubsection{Algoritmo}
 
@@ -124,10 +127,52 @@ Notamos $LA$ y $LB$ a las pirámides Laplacianas de las imágenes originales, $L
 
 4) Reconstrucción de la imagen.\\
 
-A partir de la pirámide Laplaciana generada en el paso anterior, podemos recuperar una imagen. Dicha imagen es el resultado del algoritmo.\\
+A partir de la pirámide Laplaciana generada en el paso anterior, podemos recuperar una imagen. Para ello simplemente usamos el modo en que se construye esta pirámide que es la diferencia entre gaussianas de distintos niveles. Entonces partiremos del nivel mayor de la pirámide que es por definición una gaussiana y lo iremos sumando, sucesivamente, con los niveles siguientes, para lo que será necesario una operación de expansión.\\
 
 \section{Resultados}
 
+A continuación vamos a mostrar los resultados de las distintas cuestiones que hemos ido resolviendo a lo largo del desarrollo de este trabajo.\\
 
+En primer lugar vamos a ver las proyecciones cilíndricas de una imagen para ver simplemente el efecto que se produce. Para implementar esto no hemos tenido más que seguir las fórmulas que podemos ver en el Szel. y construir una nueva imagen copiando la anterior según nos marquen estas fórmulas. Aquí mostramos distintas proyecciones cambiando la distancia focal de la cámara, como es lógico a más lejos se encuentre la cámara más ancho será el cilindro donde proyectamos.\\
+
+\begin{figure}[H]
+\centering
+\subfigure[Sin proyección]{\includegraphics[width=50mm]{im/curv0.png}}
+\subfigure[f = 500]{\includegraphics[width=50mm]{im/curv1.png}}
+\subfigure[f = 100]{\includegraphics[width=50mm]{im/curv2.png}}
+\subfigure[f = 50]{\includegraphics[width=50mm]{im/curv3.png}}
+\caption{Ejemplo de proyección cilíndrica} \label{proyecciones}
+\end{figure}
+
+
+Ahora vamos a entrar en el algoritmo de Burt-Adelson, este algoritmo se basa en la combinación de las pirámides laplacianas de dos imágenes según una cierta máscara binaria. Aquí podemos ver cómo hemos emulado el resultado que se muestra en el artículo de referencia que es la combinación de una naranja y una manzana. En primer lugar vemos lo que ocurre cuando no hacemos más que unir las dos mitades de las imágenes, como vemos el corte entre ambas es muy claro. En cambio en la segunda imagen podemos ver el resultado tras aplicar el algoritmo de Burt-Adelson, en el que claramente se ve cómo el corte entre ambas se ha suavizado.\\
+
+
+Hay que señalar que hemos de tener cuidado con las imágenes de las que partimos puesto que la que teníamos poseía una línea negra en la parte superior y esto da problemas a la hora de los cálculos ya que produce números negativos que producirán errores que se propagarán a lo largo del cálculo de la laplaciana, con lo que hemos recortado las imágenes para evitar tal línea.\\
+
+\begin{figure}[H]
+\centering
+\subfigure[Sin suaviazado]{\includegraphics[width=50mm]{im/applesin.png}}
+\subfigure[Con suavizado]{\includegraphics[width=50mm]{im/applecon.png}}
+\subfigure[Máscara usada para B-A]{\includegraphics[width=50mm, frame]{im/mask_apple_orange.png}}
+\caption{Ejemplo funcinamiento Burt-Adelson} \label{B-A}
+\end{figure}
+
+Y por último vamos a ver la creación de panoramas con proyección cilíndrica y el algoritmo de Burt-Adelson, aquí realmente hemos obtenido unos resultados no muy buenos ya que las imágenes que hemos usado para tal propósito han sido tomadas a mano y como vamos a apreciar en las dos capturas que vamos a mostrar a continuación no hay mejora al aplicar Burt-Adelson:
+
+\begin{figure}[H]
+\centering
+\subfigure[Sin suaviazado]{\includegraphics[width=50mm]{im/mosaicoSin.jpg}}
+\subfigure[Con suavizado]{\includegraphics[width=50mm]{im/mosaicoCon.jpg}}
+\caption{Ejemplo funcinamiento Burt-Adelson para la creación de panoramas} \label{B-A}
+\end{figure}
+
+\section{Posibles mejoras}
+
+La mayor crítica es al resultado general del panorama, no por la colocación de los elementos, si no por el resultado al integrar las imágenes. Ahora bien, este resultado es extraño, pues podemos ver que el algoritmo de Burt y Adelson funciona perfectamente, en el ejemplo de la manzana.\\
+
+Podríamos haber creado funciones propias para buscar la traslación para los panoramas. Como ya dijimos en la sección sobre la construcción del panorama, al realizarse sobre imágenes cilíndricas o esféricas, la rotación de la cámara se transforma en una simple rotación. Aún así, por pequeños defectos como pueden ser un ajuste incorrecto y sobre todo, el no poder asegurar que las imágenes se han tomado exactamente en la misma posición y con únicamente rotación con respecto al eje vertical, acumulan errores que hace que no sea solo una traslación horizontal.\\
+
+Cuando hacemos un panorama esférico, una rotación cualquiera se traduciría en un desplazamiento. Aunque quede fuera del alcance básico de los panoramas, podría ser un buen añadido.\\
 
 \end{document}
