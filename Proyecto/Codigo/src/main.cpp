@@ -461,13 +461,13 @@ float distance(Mat im1, Mat im2, int t){
 
 	for(int col = t; col < im1.cols; col++)
 		for(int row = 0; row < im1.rows; row++)
-			if(im1.at<float>(row,col) != 0 && im2.at<float>(row,col) != 0){
-				distance += abs(im1.at<float>(row,col) - im2.at<float>(row,col));
+			if(im1.at<uchar>(row,col) != 0 && im2.at<uchar>(row,col) != 0){
+				distance += abs(im1.at<uchar>(row,col) - im2.at<uchar>(row,col));
 				numPixelUsed++;
 			}
 
 	if(numPixelUsed < min_pixel_used)
-		return 10000000000000000000000000000000000000000000000000;
+		return 100000000.0;
 
 	return distance/numPixelUsed;
 }
@@ -499,8 +499,10 @@ int getTraslation(Mat &im1, Mat &im2) {
 	Mat im2_channels[3];
 	int traslation = 0;
 
-	if (im1.channels() == 1)
+	if (im1.channels() == 1){
+		cout << "calculamos distancia 1C" << endl;
 		traslation = getTraslation1C(im1, im2);
+	}
 	else if (im1.channels() == 3) {
 		split(im1, im1_channels);
 		split(im2, im2_channels);
@@ -554,7 +556,7 @@ Funcion que hace un mosaico con dos imagenes
 */
 Mat makeMosaicOfTwo (Mat im1, Mat im2) {
 	int traslation = getTraslation(im1, im2);
-
+	cout << "La traslacion es: " << traslation << endl;
 	/*cout << "im1 tiene dimensiones: " << im1.rows << "x" << im1.cols << endl;
 	cout << "im2 tiene dimensiones: " << im2.rows << "x" << im2.cols << endl;
 	cout << "La traslacion calculada es: " << traslation << endl;*/
@@ -615,7 +617,7 @@ Mat makeMosaic (vector<Mat> images) {
 
 	current_mosaic = makeMosaicOfTwo(images.at(0), images.at(1));
 
-	for (int i = 2, i < images.size(); i++)
+	for (int i = 2; i < images.size(); i++)
 		current_mosaic = makeMosaicOfTwo(current_mosaic, images.at(i));
 
 	return current_mosaic;
@@ -717,14 +719,15 @@ int main(int argc, char* argv[]){
 	vector<Mat> images;
 	vector<Mat> bent_images;
 
-	for (int i = 1; i <= 6; i++)
+	for (int i = 2; i <= 4; i++)
 		images.push_back(imread("imagenes/comp"+to_string(i)+".jpg"));
 
 	for (int i = 0; i < images.size(); i++) {
 		images.at(i).convertTo(images.at(i), CV_32FC3);
-		bent_images.push_back(cylindrical_proyection(images.at(i)));
+		bent_images.push_back(cylindrical_proyection(images.at(i), 500, 500));
 	}
 
+	//Mat mosaic = makeMosaicOfTwo(bent_images.at(2), bent_images.at(3));
 	Mat mosaic = makeMosaic(bent_images);
 
 	mosaic.convertTo(mosaic, CV_8UC3);
