@@ -167,7 +167,7 @@ vector<Mat> computeGaussianPyramid(Mat image){
 	Mat actualLevelMatrix = image;
 	Mat copy_actual_level;
 
-	while (5 <= actualLevelMatrix.cols && 5 <= actualLevelMatrix.rows){
+	while (3 <= actualLevelMatrix.cols && 3 <= actualLevelMatrix.rows){
 		//cout << "El nivel actual tiene: " << actualLevelMatrix.rows << " filas y " << actualLevelMatrix.cols << " columnas." << endl;
 		gaussianPyramid.push_back(actualLevelMatrix);
 		actualLevelMatrix.copyTo(copy_actual_level);
@@ -363,8 +363,8 @@ Mat BurtAdelson(Mat imageA, Mat imageB, Mat mask){
 void showIm(Mat im) {
 	namedWindow("window", 1);
 	imshow("window", im);
-	//waitKey();
-	//destroyWindow("window");
+	waitKey();
+	destroyWindow("window");
 }
 
 /*
@@ -381,7 +381,7 @@ Mat cylindrical_proyection1C(Mat im, double f, double s){
 
 	for(int i = 0; i < im.rows; i++)
 		for(int j = 0; j < im.cols; j++)
-			bent_im.at<float>(floor(s*((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
+			bent_im.at<uchar>(floor(s*((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
 								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<float>(i,j);
 
 	return bent_im;
@@ -423,7 +423,7 @@ Mat spherical_proyection1C(Mat im, double f, double s){
 
 	for(int i = 0; i < im.rows; i++)
 		for(int j = 0; j < im.cols; j++)
-			bent_im.at<float>(floor(s*atan((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
+			bent_im.at<uchar>(floor(s*atan((i-center_y)/sqrt((j-center_x)*(j-center_x)+f*f)) + center_y),
 								floor(s*atan((j-center_x)/f) + center_x) ) = im.at<float>(i,j);
 
 	return bent_im;
@@ -548,31 +548,190 @@ Mat makeMosaic1C (Mat im1, Mat im2) {
 	return BurtAdelsonGray(expanded_im1, expanded_im2, mask);
 }
 */
+/*
+Funcion que obtiene los KeyPoints de una imagen con el detector BRISK.
+@im: imagen a la que le calculamos los KeyPoints
+@umbral: parametro de umbral (thresh) para el detector BRISK a usar.
+*/
 
+vector<KeyPoint> obtenerKeyPointsBRISK (Mat im, int umbral = 30) {
+	//Creamos el detector
+	cerr << "Crear el detector" << endl;
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
+	vector<KeyPoint> puntosDetectados;
+
+	cerr << "Detectando"<< endl;
+	//Obtenemos los KP:
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+
+	return puntosDetectados;
+}
+
+/*
+Funcion que obtiene los KeyPoints de una imagen con el detector ORB.
+@im: imagen a la que le calculamos los KeyPoints
+@num_caracteristicas: numero maximo de caracteristicas a detectar
+@tipo_marcador: criterio para elegir o no un punto HARRIS o FAST
+@umbral_FAST: umbral para elegir los puntos segun la medidad elegida
+*/
+vector<KeyPoint> obtenerKeyPointsORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20){
+	//Creamos el detector:
+	cerr << "Creamos el detector" << endl;
+	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
+	vector<KeyPoint> puntosDetectados;
+
+	//Obtenemos los KP:
+	cerr << "obtenemos kp" << endl;
+	ptrDetectorORB->detect(im, puntosDetectados);
+	cerr << "salimos"<< endl;
+	return puntosDetectados;
+}
+
+
+/*
+Funcion que obtiene los descriptores de los KeyPoints localizados mediante un detector BRISK
+@im: imagen a la que le buscamos los descriptores
+@umbral: parametro de umbral para el detector BRISK a usar
+*/
+Mat obtenerDescriptoresBRISK (Mat im, int umbral = 30) {
+	//Creamos el detector:
+	Ptr<BRISK> ptrDetectorBRISK = BRISK::create(umbral);
+	vector<KeyPoint> puntosDetectados;
+	Mat descriptores;
+
+	//Obtenemos los KP:
+	ptrDetectorBRISK->detect(im, puntosDetectados);
+
+	//Obtenemos los descriptores para estos KP:
+	ptrDetectorBRISK->compute(im, puntosDetectados, descriptores);
+
+	return descriptores;
+}
+
+Mat obtenerDescriptoresORB (Mat im, int num_caracteristicas = 500, int tipo_marcador = ORB::HARRIS_SCORE, int umbral_FAST = 20) {
+	//Creamos el detector:
+	Ptr<ORB> ptrDetectorORB = ORB::create(num_caracteristicas, 1.2f, 8, 31, 0, 2, tipo_marcador, 31, umbral_FAST);
+	vector<KeyPoint> puntosDetectados;
+	Mat descriptores;
+
+	//Obtenemos los KP:
+	ptrDetectorORB->detect(im, puntosDetectados);
+
+	//Obtenemos los descriptores para estos KP:
+	ptrDetectorORB->compute(im, puntosDetectados, descriptores);
+
+	return descriptores;
+}
+/*
+Funcion que calcula los puntos en correspondencias entre dos imagen por el criterio de Fuerza Bruta + comprobacion cruzada + ORB
+@im1 e im2: las imagenes entre las cuales vamos a buscar puntos en correspondencias.
+*/
+vector<DMatch> obtenerMatchesFuerzaBrutaORB (Mat im1, Mat im2){
+	vector<KeyPoint> puntosDetectados1, puntosDetectados2;
+	Mat descriptores1, descriptores2;
+	vector<DMatch> matches;
+
+	//Creamos el matcher con Fuerza Bruta activandole el flag para el cross check.
+	BFMatcher matcher = BFMatcher(NORM_L2, true);
+
+	//Obtenemos los Key Points con ORB:
+	puntosDetectados1 = obtenerKeyPointsORB(im1, 1000, ORB::HARRIS_SCORE, 35);
+	puntosDetectados2 = obtenerKeyPointsORB(im2, 1000, ORB::HARRIS_SCORE, 35);
+
+
+	//Obtenemos los descriptores de los puntos obtenidos en cada imagen.
+	descriptores1 = obtenerDescriptoresORB(im1, 1000, ORB::HARRIS_SCORE, 35);
+	descriptores2 = obtenerDescriptoresORB(im2, 1000, ORB::HARRIS_SCORE, 35);
+
+	//Calculamos los matches entre ambas imagenes:
+	matcher.match(descriptores1, descriptores2, matches);
+
+	return matches;
+}
+
+Mat calcularHomografia (Mat origen, Mat destino) {
+	vector<KeyPoint> puntosDetectadosOrigen, puntosDetectadosDestino;
+	vector<DMatch> matches;
+	vector<Point2f> puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino;
+
+	Mat origen_aux;
+	origen.convertTo(origen_aux,CV_8U);
+	Mat destino_aux;
+	destino.convertTo(destino_aux,CV_8U);
+	
+	//Obtenemos los puntos clave con BRISK en cada imagen
+	puntosDetectadosOrigen = obtenerKeyPointsORB(origen_aux, 65);
+	puntosDetectadosDestino = obtenerKeyPointsORB(destino_aux, 65);
+
+	//Obtenemos los matches por fuerza bruta:
+	matches = obtenerMatchesFuerzaBrutaORB(origen_aux, destino_aux);
+	cerr << "Poner en correspondencias"<< endl;
+	//Obtenemos los puntos en correspondencias entre ambas imagenes:
+	for (int i = 0; i < matches.size(); i++){
+		puntosEnCorrespondenciasOrigen.push_back(puntosDetectadosOrigen[matches[i].queryIdx].pt);
+		puntosEnCorrespondenciasDestino.push_back(puntosDetectadosDestino[matches[i].trainIdx].pt);
+	}
+	cerr << "Antes de find homografy"<< endl;
+	//Calculamos la homografia con los puntos en correspondencias:
+	Mat H = findHomography(puntosEnCorrespondenciasOrigen, puntosEnCorrespondenciasDestino, CV_RANSAC);
+	cerr << "Completamos el findhomografy"<< endl;
+	//Pasamos las homografia a 32F:
+	H.convertTo(H, CV_32F);
+
+	return H;
+}
 /*
 Funcion que hace un mosaico con dos imagenes
 @im1: una de las imagenes que forman el mosaico
 @im2: la otra imagen para formar el mosaico
 */
 Mat makeMosaicOfTwo (Mat im1, Mat im2) {
-	int traslation = getTraslation(im1, im2);
-	cout << "La traslacion es: " << traslation << endl;
+	//int traslation = getTraslation(im1, im2);
+	//cout << "La traslacion es: " << traslation << endl;
 	/*cout << "im1 tiene dimensiones: " << im1.rows << "x" << im1.cols << endl;
 	cout << "im2 tiene dimensiones: " << im2.rows << "x" << im2.cols << endl;
 	cout << "La traslacion calculada es: " << traslation << endl;*/
 
-
-	Mat expanded_im1 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
-	Mat expanded_im2 = Mat::zeros(im1.rows, im1.cols + traslation, im1.type());
+	//int side = im1.rows;
+	cerr << "Entramos en el mosaico" << endl;
+    //if (side < im1.cols + traslation) side = im1.cols + traslation;
+	int side = 1000;
+    Mat expanded_im1 = Mat::zeros(side, side, im1.type());
+    Mat expanded_im2 = Mat::zeros(side, side, im1.type());
 	Mat mask = Mat::zeros(expanded_im1.rows, expanded_im1.cols, CV_32F);
+
+	//Creamos la imagen donde proyectaremos ambas imagenes:
+	//Mat mosaico = Mat(550, 1000, origen.type());
+
+	//Colocamos la primera imagen en la esquina superior izquierda por medio de la identidad:
+	Mat id = Mat(3,3,CV_32F,0.0);
+
+	for (int i = 0; i < 3; i++)
+		id.at<float>(i,i) = 1.0;
+	cerr<< "primera proyeccion" << endl;
+	warpPerspective(im1, expanded_im1, id, Size(expanded_im1.cols, expanded_im1.rows), INTER_LINEAR, BORDER_CONSTANT);
+	cerr << "Calculamos homografía" << endl;
+	//Calculamos la homografia que lleva la segunda imagen a la que hemos colocado primero en el plano de proyeccion:
+	Mat homografia = calcularHomografia(im2, im1);
+	cerr << "Segunda proyeccion"<< endl;
+	//Colocamos la segunda imagen por medio de esa homografia (compuesta con la identidad):
+	warpPerspective(im2, expanded_im2, homografia, Size(expanded_im2.cols, expanded_im2.rows), INTER_LINEAR, BORDER_TRANSPARENT);
+
+	Mat aux;
+	expanded_im2.convertTo(aux,CV_8UC3);
+	showIm(aux);
+
+	//calcular los puntos guay, juntarlos, homografia, y proyectar ambos
 
 	//cout << "Las expandidas tienen: " << expanded_im1.rows << " filas y " << expanded_im1.cols << " cols." << endl;
 
-	Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.cols, im1.rows));
-	Mat expanded_im2_ROI = expanded_im2(Rect(traslation-1, 0, im2.cols, im2.rows));
+	//Mat expanded_im1_ROI = expanded_im1(Rect(0,0,im1.cols, im1.rows));
+	//Mat expanded_im2_ROI = expanded_im2(Rect(traslation-1, 0, im2.cols, im2.rows));
 
-	im1.copyTo(expanded_im1_ROI);
-	im2.copyTo(expanded_im2_ROI);
+	//im1.copyTo(expanded_im1_ROI);
+	//im2.copyTo(expanded_im2_ROI);
+	expanded_im1.convertTo(expanded_im1,CV_32FC3);
+	expanded_im2.convertTo(expanded_im2,CV_32FC3);
 
 	Mat expanded_im1_gray;
 	if (im1.channels() == 3)
@@ -594,6 +753,7 @@ Mat makeMosaicOfTwo (Mat im1, Mat im2) {
 	for (int r = 0; r < mask.rows; r++)
 		for (int c = 0; c < mask.cols; c++)
 			mask2.at<float>(r,c) = 255 *mask.at<float>(r,c);*/
+
 
 	Mat mosaic = BurtAdelson(expanded_im1, expanded_im2, mask);
 
@@ -668,8 +828,8 @@ int main(int argc, char* argv[]){
 
 
 	//EJEMPLO PARA PROBAR B-A EN COLOR
-
-	/*Mat apple = imread("imagenes/apple.jpeg");
+/*
+	Mat apple = imread("imagenes/apple.jpeg");
 	Mat orange = imread("imagenes/orange.jpeg");
 	Mat mask = imread("imagenes/mask_apple_orange.png", 0);
 
@@ -694,33 +854,38 @@ int main(int argc, char* argv[]){
 
 	combination.convertTo(combination, CV_8UC3);
 
-	imshow("combination", combination);*/
-
+	showIm(combination);
+*/
 	//EJEMPLO PARA PROBAR B-A + TRASLACION
-	/*Mat im1 = imread("imagenes/comp3.jpg", 0);
-	Mat im2 = imread("imagenes/comp4.jpg", 0);
+	Mat im1 = imread("imagenes/comp3.jpg");
+	Mat im2 = imread("imagenes/comp4.jpg");
+	showIm(im1);
+	showIm(im2);
 
-	Mat bent_im1 = curvar_cilindro(im1, 500, 500);
-	Mat bent_im2 = curvar_cilindro(im2, 500, 500);
+	Mat bent_im1 = cylindrical_proyection(im1, 500, 500);
+	Mat bent_im2 = cylindrical_proyection(im2, 500, 500);
 
 	imshow("im1 curvada", bent_im1);
 	imshow("im2 curvada", bent_im2);
 
-	bent_im1.convertTo(bent_im1, CV_32F);
-	bent_im2.convertTo(bent_im2, CV_32F);
+	//bent_im1.convertTo(bent_im1, CV_32F);
+	//bent_im2.convertTo(bent_im2, CV_32F);
 
-	Mat mosaic = makeMosaic(bent_im1, bent_im2);
+	Mat mosaic = makeMosaicOfTwo(bent_im1, bent_im2);
 
 	mosaic.convertTo(mosaic, CV_8U);
 
-	imshow("El mosaico", mosaic);*/
+	imshow("El mosaico", mosaic);
 
-	//EJEMPLO PARA PROBAR MOSAICO DE N imagenes
+	/*EJEMPLO PARA PROBAR MOSAICO DE N imagenes
 	vector<Mat> images;
 	vector<Mat> bent_images;
 
-	for (int i = 2; i <= 4; i++)
+	for (int i = 3; i <= 4; i++)
 		images.push_back(imread("imagenes/comp"+to_string(i)+".jpg"));
+
+	//images.push_back(imread("imagenes/Yosemite1.jpg"));
+	//images.push_back(imread("imagenes/Yosemite2.jpg"));
 
 	for (int i = 0; i < images.size(); i++) {
 		images.at(i).convertTo(images.at(i), CV_32FC3);
@@ -733,7 +898,7 @@ int main(int argc, char* argv[]){
 	mosaic.convertTo(mosaic, CV_8UC3);
 
 	imshow("El mosaico", mosaic);
-
+*/
 
 
 	waitKey();
